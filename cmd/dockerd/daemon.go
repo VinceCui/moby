@@ -468,6 +468,7 @@ func loadDaemonCliConfig(opts *daemonOptions) (*config.Config, error) {
 		return nil, fmt.Errorf(`cannot specify both "--graph" and "--data-root" option`)
 	}
 
+	//cyz-> 这个地方将config-file合并到config中了。
 	if opts.configFile != "" {
 		c, err := config.MergeDaemonConfigurations(conf, flags, opts.configFile)
 		if err != nil {

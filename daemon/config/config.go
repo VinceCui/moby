@@ -49,6 +49,7 @@ const (
 // that MUST NOT be parsed as deep structures.
 // Use this to differentiate these options
 // with others like the ones in CommonTLSOptions.
+//cyz-> 只能一级选项放在这里面，平的。
 var flatOptions = map[string]bool{
 	"cluster-store-opts": true,
 	"log-opts":           true,
@@ -336,6 +337,7 @@ func getConflictFreeConfiguration(configFile string, flags *pflag.FlagSet) (*Con
 			return nil, err
 		}
 
+		//cyz-> 此处存疑？？？
 		// Override flag values to make sure the values set in the config file with nullable values, like `false`,
 		// are not overridden by default truthy values from the flags that were not explicitly set.
 		// See https://github.com/docker/docker/issues/20289 for an example.
@@ -374,6 +376,7 @@ func getConflictFreeConfiguration(configFile string, flags *pflag.FlagSet) (*Con
 		return nil, err
 	}
 
+	//cyz-> RootDeprecated这在json对应graph，Root对应data-root
 	if config.RootDeprecated != "" {
 		logrus.Warn(`The "graph" config file option is deprecated. Please use "data-root" instead.`)
 
@@ -381,6 +384,7 @@ func getConflictFreeConfiguration(configFile string, flags *pflag.FlagSet) (*Con
 			return nil, fmt.Errorf(`cannot specify both "graph" and "data-root" config file options`)
 		}
 
+		//cyz-> graph已经弃用，所以如果选择了它，就激活data-root
 		config.Root = config.RootDeprecated
 	}
 
@@ -388,6 +392,7 @@ func getConflictFreeConfiguration(configFile string, flags *pflag.FlagSet) (*Con
 }
 
 // configValuesSet returns the configuration values explicitly set in the file.
+//cyz-> 从一个有两层的树生成一个平的map
 func configValuesSet(config map[string]interface{}) map[string]interface{} {
 	flatten := make(map[string]interface{})
 	for k, v := range config {
@@ -417,6 +422,7 @@ func findConfigurationConflicts(config map[string]interface{}, flags *pflag.Flag
 
 	// 2. Discard values that implement NamedOption.
 	// Their configuration name differs from their flag name, like `labels` and `label`.
+	//cyz-> 有NamedOption设置的不算未知量，删了它们
 	if len(unknownKeys) > 0 {
 		unknownNamedConflicts := func(f *pflag.Flag) {
 			if namedOption, ok := f.Value.(opts.NamedOption); ok {
@@ -428,6 +434,7 @@ func findConfigurationConflicts(config map[string]interface{}, flags *pflag.Flag
 		flags.VisitAll(unknownNamedConflicts)
 	}
 
+	//cyz-> 返回格式化的err，告诉用户哪些是未知flag
 	if len(unknownKeys) > 0 {
 		var unknown []string
 		for key := range unknownKeys {
@@ -450,6 +457,7 @@ func findConfigurationConflicts(config map[string]interface{}, flags *pflag.Flag
 			}
 		} else {
 			// search flag name in the json configuration payload
+			//cyz-> 这个for只有两次迭代噢，一次是name，一次是shorthand
 			for _, name := range []string{f.Name, f.Shorthand} {
 				if value, ok := config[name]; ok {
 					conflicts = append(conflicts, printConflict(name, f.Value.String(), value))
@@ -461,6 +469,7 @@ func findConfigurationConflicts(config map[string]interface{}, flags *pflag.Flag
 
 	flags.Visit(duplicatedConflicts)
 
+	//cyz-> 返回格式化的err，告诉用户哪些是冲突flag（）
 	if len(conflicts) > 0 {
 		return fmt.Errorf("the following directives are specified both as a flag and in the configuration file: %s", strings.Join(conflicts, ", "))
 	}
