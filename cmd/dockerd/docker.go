@@ -16,10 +16,10 @@ import (
 )
 
 func newDaemonCommand() *cobra.Command {
-	//根据一个默认的config初始化一个新的options
+	//cyz-> 根据一个默认的config初始化一个新的options
 	opts := newDaemonOptions(config.New())
 
-	//建立一个dockerd的Command
+	//cyz-> 建立一个dockerd的Command
 	cmd := &cobra.Command{
 		Use:           "dockerd [OPTIONS]",
 		Short:         "A self-sufficient runtime for containers.",
@@ -31,20 +31,20 @@ func newDaemonCommand() *cobra.Command {
 			return runDaemon(opts)
 		},
 	}
-	//此处存疑？？？
+	//cyz-> 此处存疑？？？
 	cli.SetupRootCommand(cmd)
 
-	//Command.Flags()返回local和persistent的flagset
-	//（persistent指在这里定义但全局都有效）
+	//cyz-> Command.Flags()返回local和persistent的flagset
+	//cyz->（persistent指在这里定义但全局都有效）
 	flags := cmd.Flags()
-	//此处存疑？？？这俩为何不放到opts.InstallFlags(flags)里去？？？
+	//cyz-> 此处存疑？？？这俩为何不放到opts.InstallFlags(flags)里去？？？
 	flags.BoolVarP(&opts.version, "version", "v", false, "Print version information and quit")
 	flags.StringVar(&opts.configFile, "config-file", defaultDaemonConfigFile, "Daemon configuration file")
-	//为options安装相应的flag
+	//cyz-> 为options安装相应的flag
 	opts.InstallFlags(flags)
-	//为config安装相应的flag
+	//cyz-> 为config安装相应的flag
 	installConfigFlags(opts.daemonConfig, flags)
-	//为service安装相应的flag，只对Windows有效
+	//cyz-> 为service安装相应的flag，只对Windows有效
 	installServiceFlags(flags)
 
 	return cmd

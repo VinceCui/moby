@@ -79,6 +79,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	opts.SetDefaultOptions(opts.flags)
 
+	//cyz->从options生成config
 	if cli.Config, err = loadDaemonCliConfig(opts); err != nil {
 		return err
 	}
@@ -99,12 +100,15 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		FullTimestamp:   true,
 	})
 
+	//cyz-> InitLCOW does nothing since LCOW is a windows only feature. 
 	system.InitLCOW(cli.Config.Experimental)
 
+	//cyz-> 设置默认权限掩码
 	if err := setDefaultUmask(); err != nil {
 		return fmt.Errorf("Failed to set umask: %v", err)
 	}
 
+	//cyz-> 设置log的config，如果有的话
 	if len(cli.LogConfig.Config) > 0 {
 		if err := logger.ValidateLogOpts(cli.LogConfig.Type, cli.LogConfig.Config); err != nil {
 			return fmt.Errorf("Failed to set log opts: %v", err)
@@ -117,6 +121,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		return err
 	}
 
+	//cyz-> 允许通过-p指定pidfile以避免重复，或者指定""就不用检查啦！
 	if cli.Pidfile != "" {
 		pf, err := pidfile.New(cli.Pidfile)
 		if err != nil {
@@ -130,6 +135,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	}
 
 	// TODO: extract to newApiServerConfig()
+	//cyz-> 此处存疑
 	serverConfig := &apiserver.Config{
 		Logging:     true,
 		SocketGroup: cli.Config.SocketGroup,
@@ -137,6 +143,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		CorsHeaders: cli.Config.CorsHeaders,
 	}
 
+	//cyz-> 如果定义了TLS的话
 	if cli.Config.TLS {
 		tlsOptions := tlsconfig.Options{
 			CAFile:             cli.Config.CommonTLSOptions.CAFile,
