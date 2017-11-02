@@ -26,6 +26,7 @@ const (
 	listenFdsStart = 3
 )
 
+//cyz-> systemd在启动服务进程前，会设置环境变量LISTEN_PID和LISTEN_FDS
 func Files(unsetEnv bool) []*os.File {
 	if unsetEnv {
 		defer os.Unsetenv("LISTEN_PID")

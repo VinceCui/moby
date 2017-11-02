@@ -82,12 +82,14 @@ type (
 )
 
 // Get returns the default instance of PortAllocator
+//cyz-> 单例模式
 func Get() *PortAllocator {
 	// Port Allocator is a singleton
 	// Note: Long term solution will be each PortAllocator will have access to
 	// the OS so that it can have up to date view of the OS port allocation.
 	// When this happens singleton behavior will be removed. Clients do not
 	// need to worry about this, they will not see a change in behavior.
+	//cyz-> createInstance方法被保证只会调用一次，它调用newInstance()，且newInstance()私有。
 	once.Do(createInstance)
 	return instance
 }

@@ -152,6 +152,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 			ExclusiveRootPools: true,
 		}
 
+		//cyz-> 这里使用了第三方库 tls
 		if cli.Config.TLSVerify {
 			// server requires and verifies client's certificate
 			tlsOptions.ClientAuth = tls.RequireAndVerifyClientCert
@@ -167,12 +168,15 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		cli.Config.Hosts = make([]string, 1)
 	}
 
+	//cyz-> 利用api/server的New方法根据serverConfig返回一个新的apiserver.Server
 	cli.api = apiserver.New(serverConfig)
 
 	var hosts []string
 
 	for i := 0; i < len(cli.Config.Hosts); i++ {
 		var err error
+		//cyz-> 此处的ParseHost根据是否设置了TLS和Host参数来返回一个Host，如果Host为空，会返回一个默认的Host（unix）；
+		//cyz-> 此外，如果Host没有指定协议，默认使用tcp协议。支持（tcp、unix、named_pipe、fd）
 		if cli.Config.Hosts[i], err = dopts.ParseHost(cli.Config.TLS, cli.Config.Hosts[i]); err != nil {
 			return fmt.Errorf("error parsing -H %s : %v", cli.Config.Hosts[i], err)
 		}
@@ -190,12 +194,14 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		if proto == "tcp" && (serverConfig.TLSConfig == nil || serverConfig.TLSConfig.ClientAuth != tls.RequireAndVerifyClientCert) {
 			logrus.Warn("[!] DON'T BIND ON ANY IP ADDRESS WITHOUT setting --tlsverify IF YOU DON'T KNOW WHAT YOU'RE DOING [!]")
 		}
+		//cyz-> 根据不同的协议类型初始化Listener。
 		ls, err := listeners.Init(proto, addr, serverConfig.SocketGroup, serverConfig.TLSConfig)
 		if err != nil {
 			return err
 		}
 		ls = wrapListeners(proto, ls)
 		// If we're binding to a TCP port, make sure that a container doesn't try to use it.
+		//cyz-> 通过portallocator分配port给daemon，portallocator.Get()利用单例模式返回一个全局唯一的portallocator
 		if proto == "tcp" {
 			if err := allocateDaemonPort(addr); err != nil {
 				return err
@@ -203,6 +209,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		}
 		logrus.Debugf("Listener created for HTTP on %s (%s)", proto, addr)
 		hosts = append(hosts, protoAddrParts[1])
+		//cyz-> 此处存疑，难道就是将新建的Listener放到cli.api的servers列表里？
 		cli.api.Accept(addr, ls...)
 	}
 

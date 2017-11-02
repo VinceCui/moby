@@ -25,6 +25,7 @@ import (
 // The order of the file descriptors is preserved in the returned slice.
 // Nil values are used to fill any gaps. For example if systemd were to return file descriptors
 // corresponding with "udp, tcp, tcp", then the slice would contain {nil, net.Listener, net.Listener}
+//cyz-> 根据Files返回的fds设置FileListener。你要知道，一切协议的套接字在UNIX中都是fd形式的。
 func Listeners(unsetEnv bool) ([]net.Listener, error) {
 	files := Files(unsetEnv)
 	listeners := make([]net.Listener, len(files))
@@ -40,6 +41,7 @@ func Listeners(unsetEnv bool) ([]net.Listener, error) {
 // TLSListeners returns a slice containing a net.listener for each matching TCP socket type
 // passed to this process.
 // It uses default Listeners func and forces TCP sockets handlers to use TLS based on tlsConfig.
+//cyz-> 简单地调用Listeners函数，并将其中的tcp设置为TLS模式的。
 func TLSListeners(unsetEnv bool, tlsConfig *tls.Config) ([]net.Listener, error) {
 	listeners, err := Listeners(unsetEnv)
 
@@ -50,6 +52,7 @@ func TLSListeners(unsetEnv bool, tlsConfig *tls.Config) ([]net.Listener, error) 
 	if tlsConfig != nil && err == nil {
 		for i, l := range listeners {
 			// Activate TLS only for TCP sockets
+			//cyz-> 根据net.Listener的方法得知它是不是一个tcp
 			if l.Addr().Network() == "tcp" {
 				listeners[i] = tls.NewListener(l, tlsConfig)
 			}
