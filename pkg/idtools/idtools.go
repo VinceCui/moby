@@ -131,6 +131,7 @@ type IDMappings struct {
 // using the data from /etc/sub{uid,gid} ranges, creates the
 // proper uid and gid remapping ranges for that user/group pair
 func NewIDMappings(username, groupname string) (*IDMappings, error) {
+	//cyz-> 从/etc/sub{uid,gid}处分析得到
 	subuidRanges, err := parseSubuid(username)
 	if err != nil {
 		return nil, err
@@ -146,6 +147,7 @@ func NewIDMappings(username, groupname string) (*IDMappings, error) {
 		return nil, fmt.Errorf("No subgid ranges found for group %q", groupname)
 	}
 
+	//cyz-> 返回的是一个map，详见下面的代码
 	return &IDMappings{
 		uids: createIDMap(subuidRanges),
 		gids: createIDMap(subgidRanges),
@@ -218,6 +220,7 @@ func createIDMap(subidRanges ranges) []IDMap {
 	// sort the ranges by lowest ID first
 	sort.Sort(subidRanges)
 	containerID := 0
+	//cyz-> 有几个range，就依次将容器id从0映射到hostid。
 	for _, idrange := range subidRanges {
 		idMap = append(idMap, IDMap{
 			ContainerID: containerID,

@@ -15,6 +15,7 @@ import (
 )
 
 // ServiceOptions holds command line options.
+//cyz-> 此处存疑？？？
 type ServiceOptions struct {
 	AllowNondistributableArtifacts []string `json:"allow-nondistributable-artifacts,omitempty"`
 	Mirrors                        []string `json:"registry-mirrors,omitempty"`
@@ -150,6 +151,7 @@ func (config *serviceConfig) LoadMirrors(mirrors []string) error {
 
 	config.Mirrors = unique
 
+	//cyz-> 此处存疑？？？
 	// Configure public registry since mirrors may have changed.
 	config.IndexConfigs[IndexName] = &registrytypes.IndexInfo{
 		Name:     IndexName,

@@ -599,11 +599,14 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		return nil, err
 	}
 
+	//cyz-> 设置remaproot，可以让容器有一个 “假”的  root 用户，它在容器内是 root，在容器外是一个非 root 用户。
 	idMappings, err := setupRemappedRoot(config)
 	if err != nil {
 		return nil, err
 	}
+	//cyz-> 获得容器的root映射到host的uid，gid，如果idMappings，则返回0,0表示不使用user remap，也正确。
 	rootIDs := idMappings.RootPair()
+	//cyz-> 设置Daemon进程的一些配置，oom_score_adj，may_detach_mounts
 	if err := setupDaemonProcess(config); err != nil {
 		return nil, err
 	}
@@ -1157,7 +1160,7 @@ func setDefaultMtu(conf *config.Config) {
 	if conf.Mtu != 0 {
 		return
 	}
-	conf.Mtu = config.DefaultNetworkMtu
+	conf.Mtu = config.DefaultNetworkMtuDefaultNetworkMtu
 }
 
 func (daemon *Daemon) configureVolumes(rootIDs idtools.IDPair) (*store.VolumeStore, error) {

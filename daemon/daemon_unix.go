@@ -1159,6 +1159,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 	// if the daemon was started with remapped root option, parse
 	// the config option to the int uid,gid values
 	if config.RemappedRoot != "" {
+		//cyz-> 这个函数会处理"--userns-remap=default"情况，并创建相应用户。
 		username, groupname, err := parseRemappedRoot(config.RemappedRoot)
 		if err != nil {
 			return nil, err
@@ -1419,9 +1420,11 @@ func rootFSToAPIType(rootfs *image.RootFS) types.RootFS {
 // setupDaemonProcess sets various settings for the daemon's process
 func setupDaemonProcess(config *config.Config) error {
 	// setup the daemons oom_score_adj
+	//cyz-> out of memory, score, adj
 	if err := setupOOMScoreAdj(config.OOMScoreAdjust); err != nil {
 		return err
 	}
+	//cyz-> 此处存疑？？？
 	if err := setMayDetachMounts(); err != nil {
 		logrus.WithError(err).Warn("Could not set may_detach_mounts kernel parameter")
 	}

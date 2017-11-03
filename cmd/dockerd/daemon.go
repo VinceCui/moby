@@ -226,12 +226,14 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	if err != nil {
 		return err
 	}
+	//cyz-> 这里处理INT, TERM, QUIT, SIGPIPE信号。里面参数1是cleanup函数，它给stopc发送一个信号，阻塞住，只有close了才能返回了。
 	signal.Trap(func() {
 		cli.stop()
 		<-stopc // wait for daemonCli.start() to return
 	}, logrus.StandardLogger())
 
 	// Notify that the API is active, but before daemon is set up.
+	//cyz-> 空函数
 	preNotifySystem()
 
 	pluginStore := plugin.NewStore()
@@ -240,6 +242,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		logrus.Fatalf("Error creating middlewares: %v", err)
 	}
 
+	//cyz-> 请注意这是重头戏，前面的配置Config, registryService, containerdRemote, pluginStore都是为了建立一个新的daemon
 	d, err := daemon.NewDaemon(cli.Config, registryService, containerdRemote, pluginStore)
 	if err != nil {
 		return fmt.Errorf("Error starting daemon: %v", err)
