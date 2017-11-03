@@ -647,17 +647,22 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		}
 	}()
 
+	//cyz-> 设置Generic Resources，此处存疑？？？
 	if err := d.setGenericResources(config); err != nil {
 		return nil, err
 	}
 	// set up SIGUSR1 handler on Unix-like systems, or a Win32 global event
 	// on Windows to dump Go routine stacks
+	//cyz-> 监听SIGUSR1信号，一旦发生，保存stack trace到指定目录下的一个file（当前时间命名）
 	stackDumpDir := config.Root
 	if execRoot := config.GetExecRoot(); execRoot != "" {
 		stackDumpDir = execRoot
 	}
 	d.setupDumpStackTrap(stackDumpDir)
 
+	//cyz-> secure computing mode，https://docs.docker.com/engine/security/seccomp/#run-without-the-default-seccomp-profile
+	//cyz-> 这一步来设置这个seccomp的profile
+	//cyz-> 这个特性和user remap特性是docker实现安全的两个特性，在《Docker技术入门与实战》中有所说明
 	if err := d.setupSeccompProfile(); err != nil {
 		return nil, err
 	}
@@ -669,6 +674,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 
 	logrus.Debugf("Using default logging driver %s", config.LogConfig.Type)
 
+	//cyz-> kernel setting的90%
 	if err := configureMaxThreads(config); err != nil {
 		logrus.Warnf("Failed to configure golang's threads limit: %v", err)
 	}

@@ -72,6 +72,7 @@ const stacksLogNameTemplate = "goroutine-stacks-%s.log"
 
 // DumpStacks appends the runtime stack into file in dir and returns full path
 // to that file.
+//cyz-> 将运行时堆栈记录在file中并返回full path
 func DumpStacks(dir string) (string, error) {
 	var (
 		buf       []byte
@@ -80,6 +81,10 @@ func DumpStacks(dir string) (string, error) {
 	bufferLen := 16384
 	for stackSize == len(buf) {
 		buf = make([]byte, bufferLen)
+		//cyz-> Stack formats a stack trace of the calling goroutine into buf 
+		//cyz-> and returns the number of bytes written to buf. If all is true, 
+		//cyz-> Stack formats stack traces of all other goroutines into 
+		//cyz-> buf after the trace for the current goroutine.
 		stackSize = runtime.Stack(buf, true)
 		bufferLen *= 2
 	}
