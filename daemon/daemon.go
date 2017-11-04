@@ -679,10 +679,12 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		logrus.Warnf("Failed to configure golang's threads limit: %v", err)
 	}
 
+	//cyz-> 如果可以使能AppArmor，就使能它并载入default profile
 	if err := ensureDefaultAppArmorProfile(); err != nil {
 		logrus.Errorf(err.Error())
 	}
 
+	//cyz-> 创建容器文件夹，config.Root=="/var/lib/"
 	daemonRepo := filepath.Join(config.Root, "containers")
 	if err := idtools.MkdirAllAndChown(daemonRepo, 0700, rootIDs); err != nil && !os.IsExist(err) {
 		return nil, err
@@ -690,6 +692,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 
 	// Create the directory where we'll store the runtime scripts (i.e. in
 	// order to support runtimeArgs)
+	//cyz-> OCI runtime 此处存疑？？？
 	daemonRuntimes := filepath.Join(config.Root, "runtimes")
 	if err := system.MkdirAll(daemonRuntimes, 0700, ""); err != nil && !os.IsExist(err) {
 		return nil, err
@@ -727,12 +730,16 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	d.RegistryService = registryService
+	//cyz-> 将d.PluginStore注册下来，也就是保存起来
 	logger.RegisterPluginGetter(d.PluginStore)
 
+	//cyz-> 建立一个metrics的监听套接字，并进行了合适的路由。
 	metricsSockPath, err := d.listenMetricsSock()
 	if err != nil {
 		return nil, err
 	}
+	//cyz-> d.PluginStore实现了plugingetter接口，这个函数的第一个形参是plugingetter
+	//cyz-> 为metricsPlugin注册回调函数，回调函数用到了metricsSockPath
 	registerMetricsPluginCallback(d.PluginStore, metricsSockPath)
 
 	createPluginExec := func(m *plugin.Manager) (plugin.Executor, error) {
