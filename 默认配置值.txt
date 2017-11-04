@@ -1,0 +1,3 @@
+config.Root: "/var/lib/docker"
+conf.Pidfile: "/var/run/docker.pid"
+conf.ExecRoot: "/var/run/docker"

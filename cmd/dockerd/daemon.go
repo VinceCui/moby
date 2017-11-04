@@ -218,6 +218,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		return err
 	}
 
+	//cyz-> 什么是libcontainerd.Remote？此处存疑？？？
 	rOpts, err := cli.getRemoteOptions()
 	if err != nil {
 		return fmt.Errorf("Failed to generate containerd options: %s", err)

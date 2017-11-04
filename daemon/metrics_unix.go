@@ -38,11 +38,13 @@ func registerMetricsPluginCallback(getter plugingetter.PluginGetter, sockPath st
 	getter.Handle(metricsPluginType, func(name string, client *plugins.Client) {
 		// Use lookup since nothing in the system can really reference it, no need
 		// to protect against removal
+		//cyz-> 从getter（pluginStore）里获取metricsPlugin
 		p, err := getter.Get(name, metricsPluginType, plugingetter.Lookup)
 		if err != nil {
 			return
 		}
 
+		//cyz-> 将获取的metricsPlugin变成一个真正的metricsPlugin
 		mp := metricsPlugin{p}
 		sockBase := mp.sockBase()
 		if err := os.MkdirAll(sockBase, 0755); err != nil {
@@ -56,6 +58,7 @@ func registerMetricsPluginCallback(getter plugingetter.PluginGetter, sockPath st
 			}
 		}()
 
+		//cyz-> 获取metricsPlugin的pluginSockPath，并将sockPath（registerMetricsPluginCallback函数的参数）挂载在之上，readonly。
 		pluginSockPath := filepath.Join(sockBase, mp.sock())
 		_, err = os.Stat(pluginSockPath)
 		if err == nil {
@@ -69,11 +72,13 @@ func registerMetricsPluginCallback(getter plugingetter.PluginGetter, sockPath st
 			f.Close()
 		}
 
+		//cyz-> 获取metricsPlugin的pluginSockPath，并将sockPath（registerMetricsPluginCallback函数的参数）挂载在之上，readonly。
 		if err := mount.Mount(sockPath, pluginSockPath, "none", "bind,ro"); err != nil {
 			logrus.WithError(err).WithField("name", name).Error("could not mount metrics socket to plugin")
 			return
 		}
 
+		//cyz-> Metrics开始收集信息，pluginStartMetricsCollection会调用plugin.Client.Call()。如果错误则unmount
 		if err := pluginStartMetricsCollection(p); err != nil {
 			if err := mount.Unmount(pluginSockPath); err != nil {
 				if mounted, _ := mount.Mounted(pluginSockPath); mounted {

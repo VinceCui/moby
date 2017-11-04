@@ -747,6 +747,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	// Plugin system initialization should happen before restore. Do not change order.
+	//cyz-> 新建了一个pluginManager，并将createPluginExec传入，它被用来创建一个新的pluginexec
 	d.pluginManager, err = plugin.NewManager(plugin.ManagerConfig{
 		Root:               filepath.Join(config.Root, "plugins"),
 		ExecRoot:           getPluginExecRoot(config.Root),
@@ -762,7 +763,10 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	var graphDrivers []string
+	
+	//cyz-> 这个for对于unix只有一次迭代，对于支持lcow的Windows有两次迭代
 	for operatingSystem, ds := range d.stores {
+		//cyz-> 创建了一个新的layer的Store实例，layer仓库（注意，这个仓库是Store而非Repo）
 		ls, err := layer.NewStoreFromOptions(layer.StoreOptions{
 			StorePath:                 config.Root,
 			MetadataStorePathTemplate: filepath.Join(config.Root, "image", "%s", "layerdb"),
@@ -792,16 +796,19 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	for operatingSystem, ds := range d.stores {
 		lsMap[operatingSystem] = ds.layerStore
 	}
+	//cyz-> 创建了一个新的layer的下载管理者和上传管理者
 	d.downloadManager = xfer.NewLayerDownloadManager(lsMap, *config.MaxConcurrentDownloads)
 	logrus.Debugf("Max Concurrent Uploads: %d", *config.MaxConcurrentUploads)
 	d.uploadManager = xfer.NewLayerUploadManager(*config.MaxConcurrentUploads)
 	for operatingSystem, ds := range d.stores {
 		imageRoot := filepath.Join(config.Root, "image", ds.graphDriver)
+		//cyz-> 创建新的基于文件系统的后端for image.Store。此处存疑？？？
 		ifs, err := image.NewFSStoreBackend(filepath.Join(imageRoot, "imagedb"))
 		if err != nil {
 			return nil, err
 		}
 
+		//cyz-> 对于给定的ifs、ls创建新的image store
 		var is image.Store
 		is, err = image.NewImageStore(ifs, operatingSystem, ds.layerStore)
 		if err != nil {
@@ -829,6 +836,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		return nil, err
 	}
 
+	//cyz-> 这会利用到发布-订阅模式
 	eventsService := events.New()
 
 	// We have a single tag/reference store for the daemon globally. However, it's
@@ -842,6 +850,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	// For backwards compatibility, we just put it under the windowsfilter
 	// directory regardless.
 	refStoreLocation := filepath.Join(d.stores[runtime.GOOS].imageRoot, `repositories.json`)
+	//cyz-> 这个文件保存了reference，也就是如何将repository:tag指向一个image
 	rs, err := refstore.NewReferenceStore(refStoreLocation)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't create reference store repository: %s", err)
@@ -849,6 +858,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.referenceStore = rs
 
 	for platform, ds := range d.stores {
+		//cyz-> creates a new filesystem-based metadata store，FS代表filesystem-based，此处存疑？？？
 		dms, err := dmetadata.NewFSMetadataStore(filepath.Join(ds.imageRoot, "distribution"), platform)
 		if err != nil {
 			return nil, err
@@ -869,6 +879,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 
 	// Discovery is only enabled when the daemon is launched with an address to advertise.  When
 	// initialized, the daemon is registered and we can store the discovery backend as it's read-only
+	//cyz-> --advertise-addr必须指定一个特定地址来广告它正在等待客户。所以只有指定了一个地址，Discovery才会被初始化。
 	if err := d.initDiscovery(config); err != nil {
 		return nil, err
 	}
@@ -882,13 +893,18 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 
 	d.ID = trustKey.PublicKey().KeyID()
 	d.repository = daemonRepo
+	//cyz-> 存储containers的store，放在memory中的。
 	d.containers = container.NewMemoryStore()
+	//cyz-> replica是复制品的意思，此处存疑？？？
 	if d.containersReplica, err = container.NewViewDB(); err != nil {
 		return nil, err
 	}
+	//cyz-> 用于记录exec config（即执行指令的详细信息）的store
 	d.execCommands = exec.NewStore()
 	d.trustKey = trustKey
+	//cyz-> 此处存疑？？？
 	d.idIndex = truncindex.NewTruncIndex([]string{})
+	//cyz-> 此处存疑？？？
 	d.statsCollector = d.newStatsCollector(1 * time.Second)
 	d.defaultLogConfig = containertypes.LogConfig{
 		Type:   config.LogConfig.Type,
@@ -902,8 +918,10 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.apparmorEnabled = sysInfo.AppArmor
 	d.containerdRemote = containerdRemote
 
+	//cyz-> parent containers，alias，child containers间的映射关系。此处存疑？？？
 	d.linkIndex = newLinkIndex()
 
+	//cyz-> 每5分钟清除一次可以移除的exec configs-----------------------------
 	go d.execCommandGC()
 
 	d.containerd, err = containerdRemote.NewClient(MainNamespace, d)
