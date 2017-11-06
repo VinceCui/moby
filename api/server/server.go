@@ -83,6 +83,8 @@ func (s *Server) serveAPI() error {
 		go func(srv *HTTPServer) {
 			var err error
 			logrus.Infof("API listen on %s", srv.l.Addr())
+			//cyz-> 启动Serve等待Listener上的连接，并将请求转发到s.routerSwapper也就是mux，让它来处理。
+			//cyz-> 它会一直阻塞住，直到有错误发生，Serve always returns a non-nil error. After Shutdown or Close, the returned error is ErrServerClosed.
 			if err = srv.Serve(); err != nil && strings.Contains(err.Error(), "use of closed network connection") {
 				err = nil
 			}
@@ -90,6 +92,9 @@ func (s *Server) serveAPI() error {
 		}(srv)
 	}
 
+	/*cyz-> 请注意这一块的逻辑，只要有一个server出现问题，err就可以读到一个Error，如果err非nil，则直接返回err，否则继续循环。
+		也就是说，只要还有一个server可运行且其他的server仅仅是ErrServerClosed，那么不会返回错误。如果所有的server都是ErrServerClosed，则返回nil
+		只要有一个server返回的不是ErrServerClosed错误，那么就返回一个err*/
 	for range s.servers {
 		err := <-chErrors
 		if err != nil {
@@ -196,6 +201,7 @@ func (s *Server) createMux() *mux.Router {
 // It sends an error message if there is any error during
 // the API execution.
 func (s *Server) Wait(waitChan chan error) {
+	//cyz-> 只要servers没有错误，就会一直阻塞在waitChan <- err
 	if err := s.serveAPI(); err != nil {
 		logrus.Errorf("ServeAPI error: %v", err)
 		waitChan <- err

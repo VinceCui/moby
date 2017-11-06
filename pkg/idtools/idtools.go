@@ -220,7 +220,7 @@ func createIDMap(subidRanges ranges) []IDMap {
 	// sort the ranges by lowest ID first
 	sort.Sort(subidRanges)
 	containerID := 0
-	//cyz-> 有几个range，就依次将容器id从0映射到hostid。
+	//cyz-> 有几个range，就依次将容器内的id从0映射到host的id。好好看就可以看懂这一段逻辑
 	for _, idrange := range subidRanges {
 		idMap = append(idMap, IDMap{
 			ContainerID: containerID,

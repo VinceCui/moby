@@ -79,7 +79,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	opts.SetDefaultOptions(opts.flags)
 
-	//cyz->从options生成config
+	//cyz-> 从options生成config
 	if cli.Config, err = loadDaemonCliConfig(opts); err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	//cyz-> InitLCOW does nothing since LCOW is a windows only feature. 
 	system.InitLCOW(cli.Config.Experimental)
 
-	//cyz-> 设置默认权限掩码
+	//cyz-> 设置默认权限掩码0022，与chmod的码相反
 	if err := setDefaultUmask(); err != nil {
 		return fmt.Errorf("Failed to set umask: %v", err)
 	}
@@ -116,7 +116,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	}
 
 	// Create the daemon root before we create ANY other files (PID, or migrate keys)
-	// to ensure the appropriate ACL is set (particularly relevant on Windows)
+	// to ensure the appropriate ACL(Access Control List) is set (particularly relevant on Windows)
 	if err := daemon.CreateDaemonRoot(cli.Config); err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	}
 
 	// TODO: extract to newApiServerConfig()
-	//cyz-> 此处存疑
+	//cyz-> 此处存疑？？？
 	serverConfig := &apiserver.Config{
 		Logging:     true,
 		SocketGroup: cli.Config.SocketGroup,
@@ -189,7 +189,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	for i := 0; i < len(cli.Config.Hosts); i++ {
 		var err error
 		//cyz-> 此处的ParseHost根据是否设置了TLS和Host参数来返回一个Host，如果Host为空，会返回一个默认的Host（unix）；
-		//cyz-> 此外，如果Host没有指定协议，默认使用tcp协议。支持（tcp、unix、named_pipe、fd）
+		//cyz-> 如果Host不为空但没有指定协议，默认使用tcp协议。支持（tcp、unix、named_pipe、fd）
 		if cli.Config.Hosts[i], err = dopts.ParseHost(cli.Config.TLS, cli.Config.Hosts[i]); err != nil {
 			return fmt.Errorf("error parsing -H %s : %v", cli.Config.Hosts[i], err)
 		}
@@ -222,7 +222,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		}
 		logrus.Debugf("Listener created for HTTP on %s (%s)", proto, addr)
 		hosts = append(hosts, protoAddrParts[1])
-		//cyz-> 此处存疑，难道就是将新建的Listener放到cli.api的servers列表里？
+		//cyz-> 根据Listeners新建HTTPServer结构，并放到cli.api.servers
 		cli.api.Accept(addr, ls...)
 	}
 
@@ -262,9 +262,11 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		return fmt.Errorf("Error starting daemon: %v", err)
 	}
 
+	//cyz-> StoreHosts stores the addresses the daemon is listening on
 	d.StoreHosts(hosts)
 
-	// validate after NewDaemon has restored enabled plugins. Dont change order.
+	// validate after NewDaemon has restored enabled plugins. Don't change order.
+	//cyz-> 在daemon创建之后查看the plugins requested with the --authorization-plugin flag是否有效。
 	if err := validateAuthzPlugins(cli.Config.AuthorizationPlugins, pluginStore); err != nil {
 		return fmt.Errorf("Error validating authorization plugin: %v", err)
 	}
@@ -274,6 +276,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		if !d.HasExperimental() {
 			return fmt.Errorf("metrics-addr is only supported when experimental is enabled")
 		}
+		//cyz-> metrics只支持experimental；启动metrics服务，此处存疑？？？
 		if err := startMetricsServer(cli.Config.MetricsAddress); err != nil {
 			return err
 		}
@@ -284,8 +287,10 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	// Use a buffered channel to pass changes from store watch API to daemon
 	// A buffer allows store watch API and daemon processing to not wait for each other
+	//cyz-> swarmapi.WatchMessage发送给daemon
 	watchStream := make(chan *swarmapi.WatchMessage, 32)
 
+	//cyz-> 配置一个cluster
 	c, err := cluster.New(cluster.Config{
 		Root:                   cli.Config.Root,
 		Name:                   name,
@@ -299,6 +304,8 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	if err != nil {
 		logrus.Fatalf("Error creating cluster component: %v", err)
 	}
+
+	//cyz-> Setcluster将d.cluster=c
 	d.SetCluster(c)
 	err = c.Start()
 	if err != nil {
@@ -324,6 +331,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	initRouter(routerOptions)
 
 	// process cluster change notifications
+	//cyz-> 此处存疑？？？
 	watchCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go d.ProcessClusterNotifications(watchCtx, watchStream)
@@ -337,11 +345,15 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	go cli.api.Wait(serveAPIWait)
 
 	// after the daemon is done setting up we can notify systemd api
+	//cyz-> 此处存疑？？？
 	notifySystem()
 
 	// Daemon is fully initialized and handling API traffic
 	// Wait for serve API to complete
+	//cyz-> serveAPIWait会一直阻塞，直到有某个server发生了非ErrServerClosed错误，或者所有server都返回ErrServerClosed错误
 	errAPI := <-serveAPIWait
+
+	//cyz-> 此处存疑？？？
 	c.Cleanup()
 	shutdownDaemon(d)
 	containerdRemote.Cleanup()
@@ -541,6 +553,7 @@ func loadDaemonCliConfig(opts *daemonOptions) (*config.Config, error) {
 	return conf, nil
 }
 
+//cyz-> 初始化routers，
 func initRouter(opts routerOptions) {
 	decoder := runconfig.ContainerDecoder{}
 
@@ -572,6 +585,7 @@ func initRouter(opts routerOptions) {
 		}
 	}
 
+	//cyz-> 这个方法创建了mux.Router，mux就是多路复用器，将这些router给整合到一个去。
 	opts.api.InitRouter(routers...)
 }
 

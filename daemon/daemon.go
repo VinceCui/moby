@@ -453,6 +453,7 @@ func (daemon *Daemon) restore() error {
 // swarm endpoint.
 func (daemon *Daemon) RestartSwarmContainers() {
 	group := sync.WaitGroup{}
+	//cyz-> daemon.List()返回daemon的containers.List()
 	for _, c := range daemon.List() {
 		if !c.IsRunning() && !c.IsPaused() {
 			// Autostart all the containers which has a
@@ -952,7 +953,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		return nil, err
 	}
 
-	//cyz-> restore是恢复
+	//cyz-> restore是恢复，此处存疑？？？
 	if err := d.restore(); err != nil {
 		return nil, err
 	}
@@ -1346,6 +1347,7 @@ func (daemon *Daemon) PluginGetter() *plugin.Store {
 // CreateDaemonRoot creates the root for the daemon
 func CreateDaemonRoot(config *config.Config) error {
 	// get the canonical path to the Docker root directory
+	//cyz-> 创建config.Root目录
 	var realRoot string
 	if _, err := os.Stat(config.Root); err != nil && os.IsNotExist(err) {
 		realRoot = config.Root
@@ -1356,6 +1358,8 @@ func CreateDaemonRoot(config *config.Config) error {
 		}
 	}
 
+	/*cyz-> 创建config.Root目录，并返回一个idtools.IDMappings，它保存了uid的idMap数组和gid的idMap数组，
+		一个idMap保存了{Container上的ID,Host上的ID,Size}这样一个映射关系*/
 	idMappings, err := setupRemappedRoot(config)
 	if err != nil {
 		return err

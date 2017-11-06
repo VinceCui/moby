@@ -1080,6 +1080,7 @@ func parseRemappedRoot(usergrp string) (string, string, error) {
 		return "", "", fmt.Errorf("Invalid user/group specification in --userns-remap: %q", usergrp)
 	}
 
+	//cyz-> func ParseInt(s string, base int, bitSize int) (i int64, err error)；10进制，32bits
 	if uid, err := strconv.ParseInt(idparts[0], 10, 32); err == nil {
 		// must be a uid; take it as valid
 		userID = int(uid)
@@ -1105,10 +1106,13 @@ func parseRemappedRoot(usergrp string) (string, string, error) {
 			lookupName = defaultRemappedID
 		}
 		luser, err := idtools.LookupUser(lookupName)
+		//cyz-> 错误且不是default
 		if err != nil && idparts[0] != defaultIDSpecifier {
 			// error if the name requested isn't the special "dockremap" ID
 			return "", "", fmt.Errorf("Error during uid lookup for %q: %v", lookupName, err)
-		} else if err != nil {
+		} 
+		//cyz-> 错误且是default，那么建立新的defaultid也就是"dockremap" user/group 
+		else if err != nil {
 			// special case-- if the username == "default", then we have been asked
 			// to create a new entry pair in /etc/{passwd,group} for which the /etc/sub{uid,gid}
 			// ranges will be used for the user and group mappings in user namespaced containers
@@ -1151,6 +1155,7 @@ func parseRemappedRoot(usergrp string) (string, string, error) {
 	return username, groupname, nil
 }
 
+
 func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 	if runtime.GOOS != "linux" && config.RemappedRoot != "" {
 		return nil, fmt.Errorf("User namespaces are only supported on Linux")
@@ -1159,7 +1164,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 	// if the daemon was started with remapped root option, parse
 	// the config option to the int uid,gid values
 	if config.RemappedRoot != "" {
-		//cyz-> 这个函数会处理"--userns-remap=default"情况，并创建相应用户。
+		//cyz-> parseRemappedRoot会处理"--userns-remap=default"情况；会创建相应用户，返回username和groupname。
 		username, groupname, err := parseRemappedRoot(config.RemappedRoot)
 		if err != nil {
 			return nil, err
@@ -1174,6 +1179,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 		// update remapped root setting now that we have resolved them to actual names
 		config.RemappedRoot = fmt.Sprintf("%s:%s", username, groupname)
 
+		//cyz-> 返回一个idtools.IDMappings，它保存了uid的idMap数组和gid的idMap数组，一个idMap保存了{Container上的ID,Host上的ID,Size}这样一个映射关系
 		mappings, err := idtools.NewIDMappings(username, groupname)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Can't create ID mappings: %v")
@@ -1185,6 +1191,7 @@ func setupRemappedRoot(config *config.Config) (*idtools.IDMappings, error) {
 
 func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPair) error {
 	config.Root = rootDir
+	//cyz-> 给0711权限，那么所有人都可以进入获得目录下文件的列表，和进入目录，但不能创建和删除文件。
 	// the docker root metadata directory needs to have execute permissions for all users (g+x,o+x)
 	// so that syscalls executing as non-root, operating on subdirectories of the graph root
 	// (e.g. mounted layers of a container) can traverse this path.
@@ -1208,6 +1215,7 @@ func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPa
 	// a new subdirectory with ownership set to the remapped uid/gid (so as to allow
 	// `chdir()` to work for containers namespaced to that uid/gid)
 	if config.RemappedRoot != "" {
+		//cyz-> 实测，使用remap后，config.Root变为rootDir+"rootIDs.UID.rootIDs.GID"
 		config.Root = filepath.Join(rootDir, fmt.Sprintf("%d.%d", rootIDs.UID, rootIDs.GID))
 		logrus.Debugf("Creating user namespaced daemon root: %s", config.Root)
 		// Create the root directory if it doesn't exist
@@ -1218,6 +1226,7 @@ func setupDaemonRoot(config *config.Config, rootDir string, rootIDs idtools.IDPa
 		// the graphroot won't block access to remapped root--if any pre-existing directory
 		// has strict permissions that don't allow "x", container start will fail, so
 		// better to warn and fail now
+		//cyz-> 递归循环保证所有的原来存在的父目录都可以被当前id执行，从而保证该目录最终可以被访问到。
 		dirPath := config.Root
 		for {
 			dirPath = filepath.Dir(dirPath)
