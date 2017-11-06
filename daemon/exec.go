@@ -282,6 +282,7 @@ func (d *Daemon) ContainerExecStart(ctx context.Context, name string, stdin io.R
 
 // execCommandGC runs a ticker to clean up the daemon references
 // of exec configs that are no longer part of the container.
+//cyz-> 这个地方是如何判断的？此处存疑？？？
 func (d *Daemon) execCommandGC() {
 	for range time.Tick(5 * time.Minute) {
 		var (

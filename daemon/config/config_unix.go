@@ -19,12 +19,15 @@ const (
 // It includes json tags to deserialize configuration from a file
 // using the same names that the flags in the command line uses.
 type Config struct {
+	//cyz-> CommonConfig struct定义docker daemon平台无关的配置项，定义于config.go
 	CommonConfig
 
 	// These fields are common to all unix platforms.
+	//cyz-> CommonUnixConfig struct定义可以在不同Unix平台无关的配置项，定义于config_common_unix.go
 	CommonUnixConfig
 
 	// Fields below here are platform specific.
+	//cyz-> 定义UNIX平台相关的配置项
 	CgroupParent         string                   `json:"cgroup-parent,omitempty"`
 	EnableSelinuxSupport bool                     `json:"selinux-enabled,omitempty"`
 	RemappedRoot         string                   `json:"userns-remap,omitempty"`

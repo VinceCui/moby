@@ -121,7 +121,20 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		return err
 	}
 
-	//cyz-> 允许通过-p指定pidfile以避免重复，或者指定""就不用检查啦！
+	/*cyz-> 允许通过-p指定pidfile以避免重复，或者指定""就不用检查啦！
+		pidfile一般用于daemon程序，主要作用是保证在系统中只存在该daemon的一个进程，同时也便于系统统一管理这些daemon程序。
+		一般的daemon程序，不管最终接口是直接用C实现还是用SHELL包装，都需要提供start，stop及restart功能。
+	
+		start过程需要处理的问题：
+			1. 确保系统中没有该daemon的进程。如果有，则不能启动程序。
+			2. 在daemon化之后，创建pidfile，写入pid。
+			3. 注册atexit()，确保在程序退出时清除pidfile文件。
+		stop过程做的处理：
+			1. 如果pidfile不存在，无需其它动作。
+			2. 如果pidfile存在，kill原有进程，并确认进程不存在。在旧进程异常退出时，比如直接用_exit(2)退出程序时，可能pidfile不会被删除，所以在kill进程之后还要确认pidfile文件已被删除。
+		restart动作：
+			1. stop
+			2. start*/
 	if cli.Pidfile != "" {
 		pf, err := pidfile.New(cli.Pidfile)
 		if err != nil {

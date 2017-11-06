@@ -27,6 +27,7 @@ var (
 	stateCtr *stateCounter
 )
 
+//cyz-> init函数在包被引用时先行调用了。
 func init() {
 	ns := metrics.NewNamespace("engine", "daemon", nil)
 	containerActions = ns.NewLabeledTimer("container_actions", "The number of seconds it takes to process each container action", "action")

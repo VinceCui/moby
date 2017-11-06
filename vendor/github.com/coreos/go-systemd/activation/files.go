@@ -26,13 +26,14 @@ const (
 	listenFdsStart = 3
 )
 
-//cyz-> systemd在启动服务进程前，会设置环境变量LISTEN_PID和LISTEN_FDS
+//cyz-> 读取环境变量LISTEN_PID并判断，返回从3到最大的fd
 func Files(unsetEnv bool) []*os.File {
 	if unsetEnv {
 		defer os.Unsetenv("LISTEN_PID")
 		defer os.Unsetenv("LISTEN_FDS")
 	}
 
+	//cyz-> systemd在启动服务进程前，会设置环境变量LISTEN_PID和LISTEN_FDS
 	pid, err := strconv.Atoi(os.Getenv("LISTEN_PID"))
 	if err != nil || pid != os.Getpid() {
 		return nil

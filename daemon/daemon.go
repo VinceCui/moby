@@ -152,6 +152,7 @@ func (daemon *Daemon) restore() error {
 		return err
 	}
 
+	//cyz-> daemon.repository存放当前运行的所有containers，这个for重置这些containers的rwlayer
 	for _, v := range dir {
 		id := v.Name()
 		container, err := daemon.load(id)
@@ -577,6 +578,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	setDefaultMtu(config)
 
 	// Ensure that we have a correct root key limit for launching containers.
+	//cyz-> root key是啥,此处存疑？？？
 	if err := ModifyRootKeyLimit(); err != nil {
 		logrus.Warnf("unable to modify root key limit, number of containers could be limited by this quota: %v", err)
 	}
@@ -660,9 +662,9 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 	d.setupDumpStackTrap(stackDumpDir)
 
-	//cyz-> secure computing mode，https://docs.docker.com/engine/security/seccomp/#run-without-the-default-seccomp-profile
-	//cyz-> 这一步来设置这个seccomp的profile
-	//cyz-> 这个特性和user remap特性是docker实现安全的两个特性，在《Docker技术入门与实战》中有所说明
+	/*cyz-> 设置seccomp的profile
+		secure computing mode请参考资料https://docs.docker.com/engine/security/seccomp/#run-without-the-default-seccomp-profile
+		seccomp特性和user remap特性是docker实现安全的两个特性，在《Docker技术入门与实战》中有所说明*/
 	if err := d.setupSeccompProfile(); err != nil {
 		return nil, err
 	}
@@ -679,7 +681,13 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		logrus.Warnf("Failed to configure golang's threads limit: %v", err)
 	}
 
-	//cyz-> 如果可以使能AppArmor，就使能它并载入default profile
+	/*cyz-> 如果可以使能AppArmor，就使能它并载入default profile。
+		AppArmor(Application Armor)是Linux内核的一个安全模块，AppArmor允许系统管理员将
+	每个程序与一个安全配置文件关联，从而限制程序的功能。简单的说，AppArmor是与SELinux类似
+	的一个访问控制系统，通过它你可以指定程序可以读、写或运行哪些文件，是否可以打开网络端口等。
+	作为对传统Unix的自主访问控制模块的补充，AppArmor提供了强制访问控制机制，它已经被整合
+	到2.6版本的Linux内核中。
+		Apparmor提供的访问控制是与程序绑定的.*/
 	if err := ensureDefaultAppArmorProfile(); err != nil {
 		logrus.Errorf(err.Error())
 	}
@@ -692,7 +700,12 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 
 	// Create the directory where we'll store the runtime scripts (i.e. in
 	// order to support runtimeArgs)
-	//cyz-> OCI runtime 此处存疑？？？
+	/*cyz-> OCI runtime 此处存疑，参考以下资料？？？
+		https://github.com/opencontainers/runtime-spec
+		https://segmentfault.com/a/1190000009583199#articleHeader1
+		http://www.infoq.com/cn/news/2017/02/Docker-Containerd-RunC
+		https://www.opencontainers.org/
+	*/
 	daemonRuntimes := filepath.Join(config.Root, "runtimes")
 	if err := system.MkdirAll(daemonRuntimes, 0700, ""); err != nil && !os.IsExist(err) {
 		return nil, err
@@ -733,13 +746,19 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	//cyz-> 将d.PluginStore注册下来，也就是保存起来
 	logger.RegisterPluginGetter(d.PluginStore)
 
-	//cyz-> 建立一个metrics的监听套接字，并进行了合适的路由。
+	/*cyz-> 建立一个metrics的监听套接字，并进行了合适的路由。
+		监听metrics.sock套接字，并利用http建立一个新的mux（路由），将"/metrics"路由到一个Handler，该Handler由package prometheus建立，
+	Package prometheus provides metrics primitives to instrument code for monitoring.
+	*/
 	metricsSockPath, err := d.listenMetricsSock()
 	if err != nil {
 		return nil, err
 	}
-	//cyz-> d.PluginStore实现了plugingetter接口，这个函数的第一个形参是plugingetter
-	//cyz-> 为metricsPlugin注册回调函数，回调函数用到了metricsSockPath
+	/*cyz-> 为metricsPlugin注册回调函数，回调函数用到了metricsSockPath。
+		这个函数的第一个形参是plugingetter，d.PluginStore实现了plugingetter接口；
+		CALLBACK，即回调函数，是一个通过函数指针调用的函数。如果你把函数的指针（地址）作为参数传递给另一个函数，当这个指针被用为调用它
+	所指向的函数时，我们就说这是回调函数。回调函数不是由该函数的实现方直接调用，而是在特定的事件或条件发生时由另外的一方调用的，
+	用于对该事件或条件进行响应。*/
 	registerMetricsPluginCallback(d.PluginStore, metricsSockPath)
 
 	createPluginExec := func(m *plugin.Manager) (plugin.Executor, error) {
@@ -762,8 +781,11 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		return nil, errors.Wrap(err, "couldn't create plugin manager")
 	}
 
+	/*cyz-> graphdriver负责容器镜像的管理。
+		这个博客详细讲了layerStore，imageStore，referenceStore，distributionMetadataStore和storage driver。
+	http://licyhust.com/%E5%AE%B9%E5%99%A8%E6%8A%80%E6%9C%AF/2016/09/27/docker-image-data-structure/*/
 	var graphDrivers []string
-	
+
 	//cyz-> 这个for对于unix只有一次迭代，对于支持lcow的Windows有两次迭代
 	for operatingSystem, ds := range d.stores {
 		//cyz-> 创建了一个新的layer的Store实例，layer仓库（注意，这个仓库是Store而非Repo）
@@ -802,7 +824,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.uploadManager = xfer.NewLayerUploadManager(*config.MaxConcurrentUploads)
 	for operatingSystem, ds := range d.stores {
 		imageRoot := filepath.Join(config.Root, "image", ds.graphDriver)
-		//cyz-> 创建新的基于文件系统的后端for image.Store。此处存疑？？？
+		//cyz-> 创建新的filesystem-based backend for image.Store。此处存疑？？？
 		ifs, err := image.NewFSStoreBackend(filepath.Join(imageRoot, "imagedb"))
 		if err != nil {
 			return nil, err
@@ -836,7 +858,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		return nil, err
 	}
 
-	//cyz-> 这会利用到发布-订阅模式
+	//cyz-> 这会利用到发布-订阅模式,publish-subscribe简称pubsub
 	eventsService := events.New()
 
 	// We have a single tag/reference store for the daemon globally. However, it's
@@ -895,11 +917,11 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.repository = daemonRepo
 	//cyz-> 存储containers的store，放在memory中的。
 	d.containers = container.NewMemoryStore()
-	//cyz-> replica是复制品的意思，此处存疑？？？
+	//cyz-> replica是复制品的意思，d.containersReplica、container.NewViewDB()？此处存疑？？？
 	if d.containersReplica, err = container.NewViewDB(); err != nil {
 		return nil, err
 	}
-	//cyz-> 用于记录exec config（即执行指令的详细信息）的store
+	//cyz-> 用于记录exec config（即执行指令的详细信息）的store，exec.NewStore()？此处存疑？？？
 	d.execCommands = exec.NewStore()
 	d.trustKey = trustKey
 	//cyz-> 此处存疑？？？
@@ -921,22 +943,26 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	//cyz-> parent containers，alias，child containers间的映射关系。此处存疑？？？
 	d.linkIndex = newLinkIndex()
 
-	//cyz-> 每5分钟清除一次可以移除的exec configs-----------------------------
+	//cyz-> 每5分钟清除一次可以移除的exec configs，此处存疑？？？
 	go d.execCommandGC()
 
+	//cyz-> 此处存疑？？？
 	d.containerd, err = containerdRemote.NewClient(MainNamespace, d)
 	if err != nil {
 		return nil, err
 	}
 
+	//cyz-> restore是恢复
 	if err := d.restore(); err != nil {
 		return nil, err
 	}
+	//cyz-> 关闭这个chan，那么等待着读这个chan的就不会继续阻塞。
 	close(d.startupDone)
 
 	// FIXME: this method never returns an error
 	info, _ := d.SystemInfo()
 
+	//cyz-> 这3个engine开头的跟metrics有关，此处存疑？？？
 	engineInfo.WithValues(
 		dockerversion.Version,
 		dockerversion.GitCommit,
