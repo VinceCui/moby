@@ -1,3 +1,4 @@
-config.Root: "/var/lib/docker"
+config.Root: "/var/lib/docker"，remappedRoot更改config.Root的值，config.Root变为rootDir+"rootIDs.UID.rootIDs.GID"
 conf.Pidfile: "/var/run/docker.pid"
 conf.ExecRoot: "/var/run/docker"
+daemon.configFile:"/etc/docker/daemon.json"

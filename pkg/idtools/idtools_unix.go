@@ -222,5 +222,6 @@ func lazyChown(p string, uid, gid int, stat *system.StatT) error {
 	if stat.UID() == uint32(uid) && stat.GID() == uint32(gid) {
 		return nil
 	}
+	//cyz-> 如果权限不够，这应当会返回ErrPermission错误。
 	return os.Chown(p, uid, gid)
 }

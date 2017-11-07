@@ -576,6 +576,7 @@ func (daemon *Daemon) IsSwarmCompatible() error {
 // NewDaemon sets up everything for the daemon to be able to service
 // requests from the webserver.
 func NewDaemon(config *config.Config, registryService registry.Service, containerdRemote libcontainerd.Remote, pluginStore *plugin.Store) (daemon *Daemon, err error) {
+	
 	setDefaultMtu(config)
 
 	// Ensure that we have a correct root key limit for launching containers.
@@ -598,6 +599,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 
 	// Validate platform-specific requirements
+	//cyz-> 此时如果不是root，则会出错。
 	if err := checkSystem(); err != nil {
 		return nil, err
 	}
@@ -609,7 +611,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 	//cyz-> 获得容器的root映射到host的uid，gid，如果idMappings，则返回0,0表示不使用user remap，也正确。
 	rootIDs := idMappings.RootPair()
-	//cyz-> 设置Daemon进程的一些配置，oom_score_adj，may_detach_mounts
+	//cyz-> 设置Daemon进程的一些配置，oom_score_adj，may_detach_mounts，此处存疑？？？
 	if err := setupDaemonProcess(config); err != nil {
 		return nil, err
 	}
@@ -656,7 +658,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	}
 	// set up SIGUSR1 handler on Unix-like systems, or a Win32 global event
 	// on Windows to dump Go routine stacks
-	//cyz-> 监听SIGUSR1信号，一旦发生，保存stack trace到指定目录下的一个file（当前时间命名）
+	//cyz-> 监听SIGUSR1信号，一旦发生，保存stack trace到指定目录下的1个file（当前时间命名）
 	stackDumpDir := config.Root
 	if execRoot := config.GetExecRoot(); execRoot != "" {
 		stackDumpDir = execRoot
@@ -748,9 +750,8 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	logger.RegisterPluginGetter(d.PluginStore)
 
 	/*cyz-> 建立一个metrics的监听套接字，并进行了合适的路由。
-		监听metrics.sock套接字，并利用http建立一个新的mux（路由），将"/metrics"路由到一个Handler，该Handler由package prometheus建立，
-	Package prometheus provides metrics primitives to instrument code for monitoring.
-	*/
+		监听metrics.sock套接字，并建立一个http.NewServeMux()，将"/metrics"路由到一个Handler；用goroutine开启一个新的线程接收服务
+		该Handler由package prometheus建立，Package prometheus provides metrics primitives to instrument code for monitoring.*/
 	metricsSockPath, err := d.listenMetricsSock()
 	if err != nil {
 		return nil, err
@@ -758,8 +759,8 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	/*cyz-> 为metricsPlugin注册回调函数，回调函数用到了metricsSockPath。
 		这个函数的第一个形参是plugingetter，d.PluginStore实现了plugingetter接口；
 		CALLBACK，即回调函数，是一个通过函数指针调用的函数。如果你把函数的指针（地址）作为参数传递给另一个函数，当这个指针被用为调用它
-	所指向的函数时，我们就说这是回调函数。回调函数不是由该函数的实现方直接调用，而是在特定的事件或条件发生时由另外的一方调用的，
-	用于对该事件或条件进行响应。*/
+		所指向的函数时，我们就说这是回调函数。回调函数不是由该函数的实现方直接调用，而是在特定的事件或条件发生时由另外的一方调用的，
+		用于对该事件或条件进行响应。*/
 	registerMetricsPluginCallback(d.PluginStore, metricsSockPath)
 
 	createPluginExec := func(m *plugin.Manager) (plugin.Executor, error) {
@@ -1358,12 +1359,13 @@ func CreateDaemonRoot(config *config.Config) error {
 		}
 	}
 
-	/*cyz-> 创建config.Root目录，并返回一个idtools.IDMappings，它保存了uid的idMap数组和gid的idMap数组，
+	/*cyz-> setupRemappedRoot创建config.Root目录，并返回一个idtools.IDMappings，它保存了uid的idMap数组和gid的idMap数组，
 		一个idMap保存了{Container上的ID,Host上的ID,Size}这样一个映射关系*/
 	idMappings, err := setupRemappedRoot(config)
 	if err != nil {
 		return err
 	}
+	//cyz-> setupDaemonRoot函数会为remappedRoot更改config.Root的值，config.Root变为rootDir+"rootIDs.UID.rootIDs.GID"，并创建相应目录作为root目录
 	return setupDaemonRoot(config, realRoot, idMappings.RootPair())
 }
 

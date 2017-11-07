@@ -79,7 +79,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	opts.SetDefaultOptions(opts.flags)
 
-	//cyz-> 从options生成config
+	//cyz-> 从options生成config，此处还顺带将configFile和config合并
 	if cli.Config, err = loadDaemonCliConfig(opts); err != nil {
 		return err
 	}
@@ -117,6 +117,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	// Create the daemon root before we create ANY other files (PID, or migrate keys)
 	// to ensure the appropriate ACL(Access Control List) is set (particularly relevant on Windows)
+	//cyz-> 创建config.Root目录，设置remap，如果有remappedRoot的话，config.Root变为rootDir+"rootIDs.UID.rootIDs.GID"，并创建相应目录作为root目录
 	if err := daemon.CreateDaemonRoot(cli.Config); err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	}
 
 	// TODO: extract to newApiServerConfig()
-	//cyz-> 此处存疑？？？
+	//cyz-> 设置下面的apiserver的Config
 	serverConfig := &apiserver.Config{
 		Logging:     true,
 		SocketGroup: cli.Config.SocketGroup,
@@ -165,9 +166,9 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 			ExclusiveRootPools: true,
 		}
 
-		//cyz-> 这里使用了第三方库 tls
 		if cli.Config.TLSVerify {
 			// server requires and verifies client's certificate
+			//cyz-> 这里使用了第三方库 tls
 			tlsOptions.ClientAuth = tls.RequireAndVerifyClientCert
 		}
 		tlsConfig, err := tlsconfig.Server(tlsOptions)
@@ -181,11 +182,14 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		cli.Config.Hosts = make([]string, 1)
 	}
 
-	//cyz-> 利用api/server的New方法根据serverConfig返回一个新的apiserver.Server
+	/*cyz-> 利用api/server的New方法根据serverConfig返回一个新的apiserver.Server；
+		这个很重要，它包含了*Config，[]*HTTPServer，[]router.Router，*routerSwapper和[]middleware.Middleware
+		apiserver负责监听并将请求通过mux.Router进行路由转发，此处存疑？？？还不详细------------------------------*/
 	cli.api = apiserver.New(serverConfig)
 
 	var hosts []string
 
+	//cyz-> 这个循环为Config里所有的Hosts创建监听字并存入cli.api中
 	for i := 0; i < len(cli.Config.Hosts); i++ {
 		var err error
 		//cyz-> 此处的ParseHost根据是否设置了TLS和Host参数来返回一个Host，如果Host为空，会返回一个默认的Host（unix）；
@@ -226,6 +230,8 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		cli.api.Accept(addr, ls...)
 	}
 
+	//cyz-> 先根据ServiceOptions进行配置allow-nondistributable-artifacts，registry-mirrors，insecure-registries
+	//cyz-> 返回一个DefaultService， is a registry service. It tracks configuration data such as a list of mirrors.
 	registryService, err := registry.NewService(cli.Config.ServiceOptions)
 	if err != nil {
 		return err
@@ -240,7 +246,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	if err != nil {
 		return err
 	}
-	//cyz-> 这里处理INT, TERM, QUIT, SIGPIPE信号。里面参数1是cleanup函数，它给stopc发送一个信号，阻塞住，只有close了才能返回了。
+	//cyz-> 这里处理INT, TERM, QUIT, SIGPIPE信号。里面参数func()是cleanup函数，它从stopc读一个信号，阻塞住，只有close了才能返回了。
 	signal.Trap(func() {
 		cli.stop()
 		<-stopc // wait for daemonCli.start() to return
@@ -252,11 +258,12 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	pluginStore := plugin.NewStore()
 
+	//cyz-> 什么是Middlewares？此处存疑？？？
 	if err := cli.initMiddlewares(cli.api, serverConfig, pluginStore); err != nil {
 		logrus.Fatalf("Error creating middlewares: %v", err)
 	}
 
-	//cyz-> 请注意这是重头戏，前面的配置Config, registryService, containerdRemote, pluginStore都是为了建立一个新的daemon
+	//cyz-> 利用前面的配置Config, registryService, containerdRemote, pluginStore建立一个新的daemon
 	d, err := daemon.NewDaemon(cli.Config, registryService, containerdRemote, pluginStore)
 	if err != nil {
 		return fmt.Errorf("Error starting daemon: %v", err)

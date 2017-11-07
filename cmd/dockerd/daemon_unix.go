@@ -48,6 +48,8 @@ func (cli *DaemonCli) getPlatformRemoteOptions() ([]libcontainerd.RemoteOption, 
 		noNewNS = true
 	}
 
+	//cyz-> libcontainerd.WithOOMScore，libcontainerd.WithPlugin的返回值都实现了libcontainerd.RemoteOption接口
+	//cyz-> 这些函数里有很奇怪的用法，暂不深究，此处存疑？？？------------------------------------
 	opts := []libcontainerd.RemoteOption{
 		libcontainerd.WithOOMScore(cli.Config.OOMScoreAdjust),
 		libcontainerd.WithPlugin("linux", &linux.Config{

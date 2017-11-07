@@ -82,12 +82,18 @@ func newServiceConfig(options ServiceOptions) (*serviceConfig, error) {
 		},
 		V2Only: options.V2Only,
 	}
+	/*cyz-> 将配置中--allow-nondistributable-artifacts设置的CIDRs和hostnames载入配置，
+		这个性质请参考https://docs.docker.com/registry/deploying/#considerations-for-air-gapped-registries
+		它允许将nondistributable的images push到指定的CIDRs和hostnames的registry中去，注意CIDR（无类域间路由）就是ip/mask*/
 	if err := config.LoadAllowNondistributableArtifacts(options.AllowNondistributableArtifacts); err != nil {
 		return nil, err
 	}
+	//cyz-> 将配置中--registry-mirror设置的镜像仓库导入配置，并更改public registry的mirrors参数
 	if err := config.LoadMirrors(options.Mirrors); err != nil {
 		return nil, err
 	}
+	//cyz-> 将配置中--insecure-registry设置的registry导入配置，并默认导入localhost。insecure-registry不能指定
+	//cyz-> 含有"http://","https://","://"这些，应该就是hostnames或者CIDR了。
 	if err := config.LoadInsecureRegistries(options.InsecureRegistries); err != nil {
 		return nil, err
 	}
@@ -96,6 +102,7 @@ func newServiceConfig(options ServiceOptions) (*serviceConfig, error) {
 }
 
 // LoadAllowNondistributableArtifacts loads allow-nondistributable-artifacts registries into config.
+//cyz-> 简单地分析传入的options.AllowNondistributableArtifacts，将合法的地址分为CIDRs和Hostnames
 func (config *serviceConfig) LoadAllowNondistributableArtifacts(registries []string) error {
 	cidrs := map[string]*registrytypes.NetIPNet{}
 	hostnames := map[string]bool{}
@@ -151,7 +158,6 @@ func (config *serviceConfig) LoadMirrors(mirrors []string) error {
 
 	config.Mirrors = unique
 
-	//cyz-> 此处存疑？？？
 	// Configure public registry since mirrors may have changed.
 	config.IndexConfigs[IndexName] = &registrytypes.IndexInfo{
 		Name:     IndexName,
@@ -232,6 +238,7 @@ skip:
 		}
 	}
 
+	//cyz-> 此处为何还需要再调用一次呢？此处存疑？？？
 	// Configure public registry.
 	config.IndexConfigs[IndexName] = &registrytypes.IndexInfo{
 		Name:     IndexName,
