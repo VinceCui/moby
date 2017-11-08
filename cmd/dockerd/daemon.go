@@ -283,7 +283,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		if !d.HasExperimental() {
 			return fmt.Errorf("metrics-addr is only supported when experimental is enabled")
 		}
-		//cyz-> metrics只支持experimental；启动metrics服务，此处存疑？？？
+		//cyz-> metrics只支持experimental；启动metrics服务，这个函数监听“tcp”，listenMetricsSock函数监听“unix”
 		if err := startMetricsServer(cli.Config.MetricsAddress); err != nil {
 			return err
 		}

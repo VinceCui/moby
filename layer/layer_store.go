@@ -119,6 +119,7 @@ func NewStoreFromGraphDriver(store MetadataStore, driver graphdriver.Driver, os 
 	return ls, nil
 }
 
+//cyz-> 载入指定层，如果该层已经被载入，则直接返回，否则通过读取目录下的各个文件来生成，如果有parent layer，则递归载入
 func (ls *layerStore) loadLayer(layer ChainID) (*roLayer, error) {
 	cl, ok := ls.layerMap[layer]
 	if ok {

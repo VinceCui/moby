@@ -152,9 +152,10 @@ func (daemon *Daemon) restore() error {
 		return err
 	}
 
-	//cyz-> daemon.repository存放当前运行的所有containers，这个for重置这些containers的rwlayer
+	//cyz-> daemon.repository存放当前运行的所有containers，这个for重置这些containers的rw layer
 	for _, v := range dir {
 		id := v.Name()
+		//cyz-> 创建一个新的BaseContainer并从存储的hostconfig.json生成config，如果生成的container的id和原id不同，出错
 		container, err := daemon.load(id)
 		if err != nil {
 			logrus.Errorf("Failed to load container %v: %v", id, err)
@@ -162,6 +163,7 @@ func (daemon *Daemon) restore() error {
 		}
 
 		// Ignore the container if it does not support the current driver being used by the graph
+		//cyz-> 看看Container的driver和现在所用的是否兼容
 		currentDriverForContainerOS := daemon.stores[container.OS].graphDriver
 		if (container.Driver == "" && currentDriverForContainerOS == "aufs") || container.Driver == currentDriverForContainerOS {
 			rwlayer, err := daemon.stores[container.OS].layerStore.GetRWLayer(container.ID)
@@ -826,7 +828,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	d.uploadManager = xfer.NewLayerUploadManager(*config.MaxConcurrentUploads)
 	for operatingSystem, ds := range d.stores {
 		imageRoot := filepath.Join(config.Root, "image", ds.graphDriver)
-		//cyz-> 创建新的filesystem-based backend for image.Store。此处存疑？？？
+		//cyz-> 创建新的filesystem-based backend for image.Store。
 		ifs, err := image.NewFSStoreBackend(filepath.Join(imageRoot, "imagedb"))
 		if err != nil {
 			return nil, err
@@ -954,7 +956,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		return nil, err
 	}
 
-	//cyz-> restore是恢复，此处存疑？？？
+	//cyz-> restore是恢复，尚未细看，此处存疑？？？
 	if err := d.restore(); err != nil {
 		return nil, err
 	}

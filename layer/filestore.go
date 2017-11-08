@@ -305,6 +305,8 @@ func (fms *fileMetadataStore) GetMountParent(mount string) (ChainID, error) {
 	return ChainID(dgst), nil
 }
 
+/*cyz-> 读取所有以｛支持的SHA（Secure Hash Algorithm）算法｝命名的dir里的ids并判断是否有效，生成ids
+	读取mounts，生成mounts*/
 func (fms *fileMetadataStore) List() ([]ChainID, []string, error) {
 	var ids []ChainID
 	for _, algorithm := range supportedAlgorithms {

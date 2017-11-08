@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+//cyz-> 这个函数监听“tcp”，listenMetricsSock函数监听“unix”
 func startMetricsServer(addr string) error {
 	if err := allocateDaemonPort(addr); err != nil {
 		return err

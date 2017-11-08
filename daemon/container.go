@@ -88,8 +88,10 @@ func (daemon *Daemon) containerRoot(id string) string {
 // Load reads the contents of a container from disk
 // This is typically done at startup.
 func (daemon *Daemon) load(id string) (*container.Container, error) {
+	//cyz-> 根据id新建一个BaseContainer
 	container := daemon.newBaseContainer(id)
 
+	//cyz-> 从host的/var/lib/docker/containers/#id/hostconfig.json处生成config
 	if err := container.FromDisk(); err != nil {
 		return nil, err
 	}

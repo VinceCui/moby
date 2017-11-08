@@ -69,7 +69,9 @@ func NewImageStore(fs StoreBackend, os string, ls LayerGetReleaser) (Store, erro
 }
 
 func (is *store) restore() error {
+	//cyz-> Walk calls the supplied callback for each image ID in the storage backend.
 	err := is.fs.Walk(func(dgst digest.Digest) error {
+		//cyz-> Get从/var/lib/docker/image/aufs/imagedb/content/sha256/some sha256读取配置信息生成一个新的image
 		img, err := is.Get(IDFromDigest(dgst))
 		if err != nil {
 			logrus.Errorf("invalid image %v, %v", dgst, err)
