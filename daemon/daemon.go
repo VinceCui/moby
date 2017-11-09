@@ -654,7 +654,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		}
 	}()
 
-	//cyz-> 设置Generic Resources，此处存疑？？？
+	//cyz-> 根据conf相关配置设置Generic Resources，此处存疑？？？
 	if err := d.setGenericResources(config); err != nil {
 		return nil, err
 	}
@@ -1115,6 +1115,7 @@ func (daemon *Daemon) Shutdown() error {
 // Mount sets container.BaseFS
 // (is it not set coming in? why is it unset?)
 func (daemon *Daemon) Mount(container *container.Container) error {
+	//cyz-> 不出意外的话，对RWLayer的读写将透明反映这个union fs。此处存疑？？？
 	dir, err := container.RWLayer.Mount(container.GetMountLabel())
 	if err != nil {
 		return err

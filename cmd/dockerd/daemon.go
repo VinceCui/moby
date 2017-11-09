@@ -564,6 +564,7 @@ func loadDaemonCliConfig(opts *daemonOptions) (*config.Config, error) {
 func initRouter(opts routerOptions) {
 	decoder := runconfig.ContainerDecoder{}
 
+	//cyz-> 这个函数特别重要，从这里可以看到整个docker工作的流程。-------------------------------------------------------
 	routers := []router.Router{
 		// we need to add the checkpoint router before the container router or the DELETE gets masked
 		checkpointrouter.NewRouter(opts.daemon, decoder),

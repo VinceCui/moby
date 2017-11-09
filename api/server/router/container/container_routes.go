@@ -49,6 +49,7 @@ func (s *containerRouter) getContainersJSON(ctx context.Context, w http.Response
 		config.Limit = limit
 	}
 
+	//cyz-> Containers returns the list of containers to show given the user's filtering.
 	containers, err := s.backend.Containers(config)
 	if err != nil {
 		return err

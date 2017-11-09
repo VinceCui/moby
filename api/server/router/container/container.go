@@ -29,6 +29,7 @@ type containerRouter struct {
 // NewRouter initializes a new container router
 func NewRouter(b Backend, decoder httputils.ContainerDecoder) router.Router {
 	r := &containerRouter{
+		//cyz-> 此处backend是daemon，它实现了backend接口，定义于这个文件所在目录下的backend.go
 		backend: b,
 		decoder: decoder,
 	}
@@ -44,10 +45,13 @@ func (r *containerRouter) Routes() []router.Route {
 // initRoutes initializes the routes in container router
 func (r *containerRouter) initRoutes() {
 	r.routes = []router.Route{
-		// HEAD
+		// HEAD，一种不常见的RESTful，获取资源的元数据。
+		//cyz-> headContainersArchive获得指定Container的文件系统下指定路径的文件信息，利用Json将返回值存进header并response。
 		router.NewHeadRoute("/containers/{name:.*}/archive", r.headContainersArchive),
 		// GET
+		//cyz-> getContainersJSON利用request中的filter生成指定的containers列表并以JSON的形式写进response
 		router.NewGetRoute("/containers/json", r.getContainersJSON),
+		//cyz-> 根据name export一个container的内容，对应命令"docker export"
 		router.NewGetRoute("/containers/{name:.*}/export", r.getContainersExport),
 		router.NewGetRoute("/containers/{name:.*}/changes", r.getContainersChanges),
 		router.NewGetRoute("/containers/{name:.*}/json", r.getContainersByName),

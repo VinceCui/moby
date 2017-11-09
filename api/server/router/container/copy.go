@@ -73,6 +73,7 @@ func (s *containerRouter) headContainersArchive(ctx context.Context, w http.Resp
 		return err
 	}
 
+	//cyz-> ContainerStatPath获得指定Container的文件系统下指定路径的文件信息。stat一般指文件信息
 	stat, err := s.backend.ContainerStatPath(v.Name, v.Path)
 	if err != nil {
 		return err
