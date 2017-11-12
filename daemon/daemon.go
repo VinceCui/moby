@@ -845,7 +845,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		d.stores[operatingSystem] = ds
 	}
 
-	// Configure the volumes driver
+	// Configure the volumes driver，此处存疑？？？
 	volStore, err := d.configureVolumes(rootIDs)
 	if err != nil {
 		return nil, err

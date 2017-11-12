@@ -90,6 +90,9 @@ var (
 // GetFSMagic returns the filesystem id given the path.
 func GetFSMagic(rootpath string) (FsMagic, error) {
 	var buf unix.Statfs_t
+	/*cyz-> unix.Statfs函数查询文件系统相关的信息。每个fs有一个Magic id，
+		注意，此处rootpath为config.Root+DriverName，所以filepath.Dir(rootpath)返回的是config.Root，
+		unix.Statfs读取config.Root的文件系统类型，我电脑ext4，因为挂载在该目录上的是以ext4挂载的。*/
 	if err := unix.Statfs(filepath.Dir(rootpath), &buf); err != nil {
 		return 0, err
 	}

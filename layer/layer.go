@@ -261,6 +261,7 @@ type MetadataStore interface {
 }
 
 // CreateChainID returns ID for a layerDigest slice
+//cyz-> 根据RootFS里所有的DiffID组合成一个新的sha256 id
 func CreateChainID(dgsts []DiffID) ChainID {
 	return createChainIDFromParent("", dgsts...)
 }

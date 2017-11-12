@@ -56,6 +56,7 @@ type StoreOptions struct {
 
 // NewStoreFromOptions creates a new Store instance
 func NewStoreFromOptions(options StoreOptions) (Store, error) {
+	//cyz-> 根据options新建一个graphDriver，建立相应文件夹，为config.Root/driver.Name，将它挂载到自己，--make-private。
 	driver, err := graphdriver.New(options.GraphDriver, options.PluginGetter, graphdriver.Options{
 		Root:                options.StorePath,
 		DriverOptions:       options.GraphDriverOptions,
@@ -68,6 +69,7 @@ func NewStoreFromOptions(options StoreOptions) (Store, error) {
 	}
 	logrus.Debugf("Using graph driver %s", driver)
 
+	//cyz-> 根据driver.Name建立Metadata Store：config.Root/image/driver.name/layerdb
 	fms, err := NewFSMetadataStore(fmt.Sprintf(options.MetadataStorePathTemplate, driver))
 	if err != nil {
 		return nil, err

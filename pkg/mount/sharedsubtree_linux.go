@@ -57,6 +57,7 @@ func ensureMountedAs(mountPoint, options string) error {
 	}
 
 	if !mounted {
+		//cyz-> 先将root挂载至root，这样root才能成为一个挂载点，然后才能改变sharedsubtree模式。
 		if err := Mount(mountPoint, mountPoint, "none", "bind,rw"); err != nil {
 			return err
 		}

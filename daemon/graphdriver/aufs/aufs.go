@@ -89,6 +89,7 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, graphdriver.ErrNotSupported
 	}
 
+	//cyz-> 获得config.Root的文件系统类型。这里的root是config.Root/aufs
 	fsMagic, err := graphdriver.GetFSMagic(root)
 	if err != nil {
 		return nil, err
@@ -125,6 +126,7 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 	// Create the root aufs driver dir and return
 	// if it already exists
 	// If not populate the dir structure
+	//cyz-> 如果有直接就返回了，否则继续构造
 	if err := idtools.MkdirAllAs(root, 0700, rootUID, rootGID); err != nil {
 		if os.IsExist(err) {
 			return a, nil
@@ -132,6 +134,8 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		return nil, err
 	}
 
+	/*cyz-> 可以为一个挂载点(可以包含子挂载点)设置传播类型标记(shared, private, slave, unbindable)。详情请看笔记
+		将root挂载点设为private，则将不会和任何其他挂载点共享挂载信息*/
 	if err := mountpk.MakePrivate(root); err != nil {
 		return nil, err
 	}
@@ -147,6 +151,7 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		"driver": "aufs",
 	})
 
+	//cyz-> 对于mnt中有后缀"-removing"的目录，确保该目录被完全remove
 	for _, path := range []string{"mnt", "diff"} {
 		p := filepath.Join(root, path)
 		entries, err := ioutil.ReadDir(p)
@@ -167,6 +172,8 @@ func Init(root string, options []string, uidMaps, gidMaps []idtools.IDMap) (grap
 		}
 	}
 
+	/*cyz-> NaiveDiffDriver takes a ProtoDriver（原始的Driver，请注意，此处的Driver已经实现了ProtoDriver接口），但是因为aufs本身可能并不支持DiffDriver
+		所以NaiveDiffDriver在host上实现了Diff的全部功能*/
 	a.naiveDiff = graphdriver.NewNaiveDiffDriver(a, uidMaps, gidMaps)
 	return a, nil
 }

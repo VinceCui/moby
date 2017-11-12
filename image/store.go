@@ -71,13 +71,15 @@ func NewImageStore(fs StoreBackend, os string, ls LayerGetReleaser) (Store, erro
 func (is *store) restore() error {
 	//cyz-> Walk calls the supplied callback for each image ID in the storage backend.
 	err := is.fs.Walk(func(dgst digest.Digest) error {
-		//cyz-> Get从/var/lib/docker/image/aufs/imagedb/content/sha256/some sha256读取配置信息生成一个新的image
+		//cyz-> Get从/var/lib/docker/image/aufs/imagedb/content/sha256/#xx 读取配置信息生成一个新的image，存入一个map：is.images
 		img, err := is.Get(IDFromDigest(dgst))
 		if err != nil {
 			logrus.Errorf("invalid image %v, %v", dgst, err)
 			return nil
 		}
 		var l layer.Layer
+		/*cyz-> 根据RootFS里所有的DiffID组合成一个新的sha256 id，
+			亲测正确，对应/var/lib/docker/image/aufs/layerdb/sha256/下面的一个layer id*/
 		if chainID := img.RootFS.ChainID(); chainID != "" {
 			l, err = is.ls.Get(chainID)
 			if err != nil {
@@ -102,6 +104,7 @@ func (is *store) restore() error {
 	}
 
 	// Second pass to fill in children maps
+	//cyz-> 
 	for id := range is.images {
 		if parent, err := is.GetParent(id); err == nil {
 			if parentMeta := is.images[parent]; parentMeta != nil {

@@ -173,6 +173,7 @@ func GetDriver(name string, pg plugingetter.PluginGetter, config Options) (Drive
 		return initFunc(filepath.Join(config.Root, name), config.DriverOptions, config.UIDMaps, config.GIDMaps)
 	}
 
+	//cyz-> 如果没有注册initFunc，使用插件的Driver，这只适用于experimental模式
 	pluginDriver, err := lookupPlugin(name, pg, config)
 	if err == nil {
 		return pluginDriver, nil
@@ -201,12 +202,14 @@ type Options struct {
 
 // New creates the driver and initializes it at the specified root.
 func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, error) {
+	//cyz-> 如果name不为空，尝试提供用户选择的Driver
 	if name != "" {
 		logrus.Debugf("[graphdriver] trying provided driver: %s", name) // so the logs show specified driver
 		return GetDriver(name, pg, config)
 	}
 
 	// Guess for prior driver
+	//cyz-> 看看客户设置的Drivers，选择优先级最高的
 	driversMap := scanPriorDrivers(config.Root)
 	for _, name := range priority {
 		if name == "vfs" {
@@ -216,6 +219,7 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 		if _, prior := driversMap[name]; prior {
 			// of the state found from prior drivers, check in order of our priority
 			// which we would prefer
+			//cyz-> builtin只返回注册的Driver，不使用plugin。而GetDriver则没有找到就使用.
 			driver, err := getBuiltinDriver(name, config.Root, config.DriverOptions, config.UIDMaps, config.GIDMaps)
 			if err != nil {
 				// unlike below, we will return error here, because there is prior
@@ -243,6 +247,7 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 	}
 
 	// Check for priority drivers first
+	//cyz-> 选择优先级最高的且支持的
 	for _, name := range priority {
 		driver, err := getBuiltinDriver(name, config.Root, config.DriverOptions, config.UIDMaps, config.GIDMaps)
 		if err != nil {
@@ -255,6 +260,7 @@ func New(name string, pg plugingetter.PluginGetter, config Options) (Driver, err
 	}
 
 	// Check all registered drivers if no priority driver is found
+	//cyz-> 选择注册了的且支持的
 	for name, initFunc := range drivers {
 		driver, err := initFunc(filepath.Join(config.Root, name), config.DriverOptions, config.UIDMaps, config.GIDMaps)
 		if err != nil {
