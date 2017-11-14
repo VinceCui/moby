@@ -104,6 +104,7 @@ func New(rootDir, stateDir string, options ...RemoteOption) (rem Remote, err err
 	}
 
 	// This connection is just used to monitor the connection
+	//cyz-> 这个地方调用Containerd，这个连接只是用来管理连接的。
 	client, err := containerd.New(r.GRPC.Address)
 	if err != nil {
 		return
@@ -183,6 +184,7 @@ func (r *remote) getContainerdPid() (int, error) {
 	return -1, nil
 }
 
+//cyz-> 将r.Config和r.pluginConfs写入configFile
 func (r *remote) getContainerdConfig() (string, error) {
 	path := filepath.Join(r.stateDir, configFile)
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
@@ -202,6 +204,8 @@ func (r *remote) getContainerdConfig() (string, error) {
 	return path, nil
 }
 
+//cyz-> 这个函数先获取Containerd的pidfile，如果有且不为-1说明已经在运行直接返回nil；
+//否则利用exec.Command执行一个子进程，将pid写入pidfile；主进程创建goroutine等待子进程。
 func (r *remote) startContainerd() error {
 	pid, err := r.getContainerdPid()
 	if err != nil {
@@ -260,6 +264,8 @@ func (r *remote) startContainerd() error {
 	return nil
 }
 
+//cyz-> 管理连接，如果出现多次连不上，如果是进程死了就重新开启它，
+//如果不是则向Containerd进程发送SIGUSR1信号以stack trace。
 func (r *remote) monitorConnection(client *containerd.Client) {
 	var transientFailureCount = 0
 
@@ -267,10 +273,13 @@ func (r *remote) monitorConnection(client *containerd.Client) {
 	defer ticker.Stop()
 
 	for {
+		//cyz-> 每0.5s进行一次
 		<-ticker.C
+		//cyz-> 每healthCheckTimeout检测一次client是否IsServing
 		ctx, cancel := context.WithTimeout(r.shutdownContext, healthCheckTimeout)
 		_, err := client.IsServing(ctx)
 		cancel()
+		//cyz-> 没问题就继续下一次检测
 		if err == nil {
 			transientFailureCount = 0
 			continue

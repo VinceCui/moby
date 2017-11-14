@@ -950,7 +950,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	//cyz-> 每5分钟清除一次可以移除的exec configs，此处存疑？？？
 	go d.execCommandGC()
 
-	//cyz-> 此处存疑？？？
+	//cyz-> 新建一个ContainerdRemote的Client，它负责监听Containerd的事件流
 	d.containerd, err = containerdRemote.NewClient(MainNamespace, d)
 	if err != nil {
 		return nil, err

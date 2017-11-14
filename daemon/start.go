@@ -145,7 +145,7 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 		}
 	}()
 
-	//cyz-> unix直接调用daemon.Mount
+	//cyz-> unix直接调用daemon.Mount，这将RWlayer和其父layers包括init挂载形成containerBaseFS
 	if err := daemon.conditionalMountOnStart(container); err != nil {
 		return err
 	}

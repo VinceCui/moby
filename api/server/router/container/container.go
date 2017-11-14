@@ -52,11 +52,14 @@ func (r *containerRouter) initRoutes() {
 		//cyz-> getContainersJSON利用request中的filter生成指定的containers列表并以JSON的形式写进response
 		router.NewGetRoute("/containers/json", r.getContainersJSON),
 		/*cyz-> 根据name export一个container的内容，对应命令"docker export"，这导出了容器的快照到一个本地文件。
+			原理就是将RWLayer读取出来。
 			用户既可以使用 docker load 来导入镜像存储文件到本地镜像库，也可以使用 docker import 来导入一个容器
 			快照到本地镜像库。这两者的区别在于容器快照文件将丢弃所有的历史记录和元数据信息（即仅保存容器当时的快照
 			状态），而镜像存储文件将保存完整记录，体积也要大。此外，从容器快照文件导入时可以重新指定标签等元数据信息。*/
 		router.NewGetRoute("/containers/{name:.*}/export", r.getContainersExport),
+		//cyz-> 通过比对RWlayer和其父layers来看diff
 		router.NewGetRoute("/containers/{name:.*}/changes", r.getContainersChanges),
+		//cyz-> 返回container的json信息。"docker container inspect"
 		router.NewGetRoute("/containers/{name:.*}/json", r.getContainersByName),
 		router.NewGetRoute("/containers/{name:.*}/top", r.getContainersTop),
 		router.NewGetRoute("/containers/{name:.*}/logs", r.getContainersLogs, router.WithCancel),

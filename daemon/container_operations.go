@@ -896,6 +896,7 @@ func (daemon *Daemon) initializeNetworking(container *container.Container) error
 		return nil
 	}
 
+	//cyz-> 如果使用host模式且hostname为空，使用host的hostname
 	if container.HostConfig.NetworkMode.IsHost() {
 		if container.Config.Hostname == "" {
 			container.Config.Hostname, err = os.Hostname()

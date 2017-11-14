@@ -599,6 +599,7 @@ func (c *client) createIO(bundleDir, containerID, processID string, stdinCloseSy
 	return cio, err
 }
 
+//cyz-> 将一个事件及其处理函数压入事件队列尾部。该处理函数调用daemon.ProcessEvent让daemon也对相应事件进行处理。
 func (c *client) processEvent(ctr *container, et EventType, ei EventInfo) {
 	c.eventQ.append(ei.ContainerID, func() {
 		err := c.backend.ProcessEvent(ei.ContainerID, et, ei)
@@ -639,6 +640,7 @@ func (c *client) processEvent(ctr *container, et EventType, ei EventInfo) {
 	})
 }
 
+//cyz-> 订阅Remote的事件流并处理之。
 func (c *client) processEventStream(ctx context.Context) {
 	var (
 		err         error
@@ -660,6 +662,7 @@ func (c *client) processEventStream(ctx context.Context) {
 		}
 	}()
 
+	//cyz-> 从remote处订阅一个topic
 	eventStream, err = c.remote.EventService().Subscribe(ctx, &eventsapi.SubscribeRequest{
 		Filters: []string{"namespace==" + c.namespace + ",topic~=/tasks/.+"},
 	}, grpc.FailFast(false))
@@ -669,6 +672,7 @@ func (c *client) processEventStream(ctx context.Context) {
 
 	var oomKilled bool
 	for {
+		//cyz-> 接收订阅事件
 		ev, err = eventStream.Recv()
 		if err != nil {
 			c.logger.WithError(err).Error("failed to get event")

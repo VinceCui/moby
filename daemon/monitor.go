@@ -27,6 +27,7 @@ func (daemon *Daemon) setStateCounter(c *container.Container) {
 }
 
 // ProcessEvent is called by libcontainerd whenever an event occurs
+//cyz-> 被调用时负责处理事件里和daemon相关的操作
 func (daemon *Daemon) ProcessEvent(id string, e libcontainerd.EventType, ei libcontainerd.EventInfo) error {
 	c, err := daemon.GetContainer(id)
 	if c == nil || err != nil {
