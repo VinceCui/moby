@@ -236,6 +236,8 @@ func (fms *fileMetadataStore) TarSplitReader(layer ChainID) (io.ReadCloser, erro
 	}), nil
 }
 
+//cyz-> 这3个函数在config.Root/image/driver.name/layerdb/mounts/下建立以容器id为名的目录，
+//下面建立（init-id, mount-id, parent）3个文件，存储container的init-id, mount-id和它创建时依赖的layer即parent。
 func (fms *fileMetadataStore) SetMountID(mount string, mountID string) error {
 	if err := os.MkdirAll(fms.getMountDirectory(mount), 0755); err != nil {
 		return err

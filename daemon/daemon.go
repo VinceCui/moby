@@ -1115,7 +1115,7 @@ func (daemon *Daemon) Shutdown() error {
 // Mount sets container.BaseFS
 // (is it not set coming in? why is it unset?)
 func (daemon *Daemon) Mount(container *container.Container) error {
-	//cyz-> 不出意外的话，对RWLayer的读写将透明反映这个union fs。此处存疑？？？
+	//cyz-> 根据"config.root/driver.name/layers/#id"文件里的父layer列表，全部用aufs挂载到"config.root/driver.name/mnt/#id"
 	dir, err := container.RWLayer.Mount(container.GetMountLabel())
 	if err != nil {
 		return err

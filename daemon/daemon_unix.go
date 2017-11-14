@@ -190,6 +190,7 @@ func parseSecurityOpt(container *container.Container, config *containertypes.Hos
 	)
 
 	for _, opt := range config.SecurityOpt {
+		//cyz-> 这个选项指定了禁止容器内的进程获取新的 privilege 的权限
 		if opt == "no-new-privileges" {
 			container.NoNewPrivileges = true
 			continue
@@ -211,6 +212,7 @@ func parseSecurityOpt(container *container.Container, config *containertypes.Hos
 		}
 
 		switch con[0] {
+		//cyz-> 这个label是–-security-opt的子命令，用于selinux，只支持'disable, user, role, level, type'
 		case "label":
 			labelOpts = append(labelOpts, con[1])
 		case "apparmor":
@@ -300,9 +302,14 @@ func (daemon *Daemon) adaptContainerSettings(hostConfig *containertypes.HostConf
 		hostConfig.IpcMode = containertypes.IpcMode(m)
 	}
 
+	//cyz-> 为了避免重名，当和另一个container共享这3个：PidMode, IpcMode，NetworkMode时，将
+	//`container:name` 改为 `container:ID`，此处name和ID均为对方的。
 	adaptSharedNamespaceContainer(daemon, hostConfig)
 
 	var err error
+	//cyz-> 这关乎SElinux，如果运行时指定了label，则直接返回；
+	//如果ipc、pid有一个是host或者是特权模式，则使用"disable"label
+	//如果ipc、pid使用另一个container，则获取该container的label，并且这两个一定要相等，然后生成[]string
 	opts, err := daemon.generateSecurityOpt(hostConfig)
 	if err != nil {
 		return err

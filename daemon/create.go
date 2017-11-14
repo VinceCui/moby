@@ -39,8 +39,11 @@ func (daemon *Daemon) containerCreate(params types.ContainerCreateConfig, manage
 		return containertypes.ContainerCreateCreatedBody{}, validationError{errors.New("Config cannot be empty in order to create a container")}
 	}
 
+	//cyz-> 获得image的os
 	os := runtime.GOOS
 	if params.Config.Image != "" {
+		//cyz-> Get从/var/lib/docker/image/aufs/imagedb/content/sha256/#xx 读取配置信息生成一个新的image，
+		//设置computedID为#xx，设置父image
 		img, err := daemon.GetImage(params.Config.Image)
 		if err == nil {
 			os = img.OS
@@ -53,6 +56,7 @@ func (daemon *Daemon) containerCreate(params types.ContainerCreateConfig, manage
 		}
 	}
 
+	//cyz-> 根据os判断container的设置是否有效
 	warnings, err := daemon.verifyContainerSettings(os, params.HostConfig, params.Config, false)
 	if err != nil {
 		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, validationError{err}
@@ -66,6 +70,8 @@ func (daemon *Daemon) containerCreate(params types.ContainerCreateConfig, manage
 	if params.HostConfig == nil {
 		params.HostConfig = &containertypes.HostConfig{}
 	}
+	//cyz-> adjustCPUShares特性允许应用自行调整CPU、内存等限定值。
+	//adaptContainerSettings函数将一些设定自适应地改变成合适的设定
 	err = daemon.adaptContainerSettings(params.HostConfig, params.AdjustCPUShares)
 	if err != nil {
 		return containertypes.ContainerCreateCreatedBody{Warnings: warnings}, validationError{err}
@@ -89,6 +95,7 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig, managed bool) (
 		err       error
 	)
 
+	//cyz-> 获得image
 	os := runtime.GOOS
 	if params.Config.Image != "" {
 		img, err = daemon.GetImage(params.Config.Image)
@@ -101,12 +108,13 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig, managed bool) (
 		if runtime.GOOS == "windows" && img.OS == "linux" && !system.LCOWSupported() {
 			return nil, errors.New("operating system on which parent image was created is not Windows")
 		}
-	} else {
+	} else {//cyz-> 此处存疑？？？
 		if runtime.GOOS == "windows" {
 			os = "linux" // 'scratch' case.
 		}
 	}
 
+	//cyz-> mergeAndVerifyConfig和mergeAndVerifyLogConfig将Config和原有的合并
 	if err := daemon.mergeAndVerifyConfig(params.Config, img); err != nil {
 		return nil, validationError{err}
 	}
@@ -126,6 +134,7 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig, managed bool) (
 		}
 	}()
 
+	//cyz-> 设置Security相关的选项
 	if err := daemon.setSecurityOptions(container, params.HostConfig); err != nil {
 		return nil, err
 	}
@@ -194,18 +203,26 @@ func toHostConfigSelinuxLabels(labels []string) []string {
 	return labels
 }
 
+//cyz-> 这关乎SElinux，如果运行时指定了label，则直接返回；
+//如果ipc、pid有一个是host或者是特权模式，则使用"disable"label
+//如果ipc、pid使用另一个container，则获取该container的label，并且这两个一定要相等，然后生成[]string
 func (daemon *Daemon) generateSecurityOpt(hostConfig *containertypes.HostConfig) ([]string, error) {
 	for _, opt := range hostConfig.SecurityOpt {
 		con := strings.Split(opt, "=")
 		if con[0] == "label" {
 			// Caller overrode SecurityOpts
+			//cyz-> 如果运行时指定了SecurityOpts的子选项label，则直接返回
 			return nil, nil
 		}
 	}
+
+	//cyz-> 如果没有指定label，则需要自动生成适合的labels
+
 	ipcMode := hostConfig.IpcMode
 	pidMode := hostConfig.PidMode
 	privileged := hostConfig.Privileged
 	if ipcMode.IsHost() || pidMode.IsHost() || privileged {
+		//cyz-> 将"disable"这个label转换为HostConfigSelinux可以识别的格式。此处存疑？？？
 		return toHostConfigSelinuxLabels(label.DisableSecOpt()), nil
 	}
 
@@ -257,11 +274,13 @@ func (daemon *Daemon) setRWLayer(container *container.Container) error {
 	}
 
 	rwLayerOpts := &layer.CreateRWLayerOpts{
+		//cyz-> 不设置的话为""
 		MountLabel: container.MountLabel,
 		InitFunc:   daemon.getLayerInit(),
 		StorageOpt: container.HostConfig.StorageOpt,
 	}
 
+	//cyz-> CreateRWLayer先搜寻，如果有直接返回；创建init layer并利用aufs挂载parents，创建rw layer
 	rwLayer, err := daemon.stores[container.OS].layerStore.CreateRWLayer(container.ID, layerID, rwLayerOpts)
 	if err != nil {
 		return err
@@ -289,12 +308,14 @@ func (daemon *Daemon) VolumeCreate(name, driverName string, opts, labels map[str
 	return apiV, nil
 }
 
+//cyz-> 将config和image原来的config合并
 func (daemon *Daemon) mergeAndVerifyConfig(config *containertypes.Config, img *image.Image) error {
 	if img != nil && img.Config != nil {
 		if err := merge(config, img.Config); err != nil {
 			return err
 		}
 	}
+	//cyz-> 此处对应ENTRYPOINT和CMD
 	// Reset the Entrypoint if it is [""]
 	if len(config.Entrypoint) == 1 && config.Entrypoint[0] == "" {
 		config.Entrypoint = nil

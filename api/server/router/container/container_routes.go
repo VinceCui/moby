@@ -414,11 +414,13 @@ func (s *containerRouter) postContainersCreate(ctx context.Context, w http.Respo
 
 	name := r.Form.Get("name")
 
+	//cyz-> config是container的config，hostConfig是host的
 	config, hostConfig, networkingConfig, err := s.decoder.DecodeConfig(r.Body)
 	if err != nil {
 		return err
 	}
 	version := httputils.VersionFromContext(ctx)
+	//cyz-> adjustCPUShares在1.19版本前为真
 	adjustCPUShares := versions.LessThan(version, "1.19")
 
 	// When using API 1.24 and under, the client is responsible for removing the container

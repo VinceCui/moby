@@ -145,6 +145,7 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 		}
 	}()
 
+	//cyz-> unix直接调用daemon.Mount
 	if err := daemon.conditionalMountOnStart(container); err != nil {
 		return err
 	}

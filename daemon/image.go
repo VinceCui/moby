@@ -27,18 +27,23 @@ func (e errImageDoesNotExist) NotFound() {}
 // GetImageIDAndOS returns an image ID and operating system corresponding to the image referred to by
 // refOrID.
 func (daemon *Daemon) GetImageIDAndOS(refOrID string) (image.ID, string, error) {
+	//cyz-> 对refOrID进行分析，分析出ref和ID
 	ref, err := reference.ParseAnyReference(refOrID)
 	if err != nil {
 		return "", "", validationError{err}
 	}
 	namedRef, ok := ref.(reference.Named)
 	if !ok {
+		//cyz-> 如果不是名字就是ID，否则出错
 		digested, ok := ref.(reference.Digested)
 		if !ok {
 			return "", "", errImageDoesNotExist{ref}
 		}
 		id := image.IDFromDigest(digested.Digest())
+		//cyz-> 在所有平台中的imageStore搜寻id
 		for platform := range daemon.stores {
+			//cyz-> Get从/var/lib/docker/image/aufs/imagedb/content/sha256/#xx 读取配置信息生成一个新的image，
+			//设置computedID为#xx，设置父image
 			if _, err = daemon.stores[platform].imageStore.Get(id); err == nil {
 				return id, platform, nil
 			}

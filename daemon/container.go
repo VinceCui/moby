@@ -131,6 +131,7 @@ func (daemon *Daemon) newContainer(name string, operatingSystem string, config *
 		err            error
 		noExplicitName = name == ""
 	)
+	//cyz-> 此处id是一个随机生成的，如果没有指定name，则name也是随机生成的。
 	id, name, err = daemon.generateIDAndName(name)
 	if err != nil {
 		return nil, err
@@ -144,6 +145,7 @@ func (daemon *Daemon) newContainer(name string, operatingSystem string, config *
 			}
 		}
 	} else {
+		//cyz-> 如果network不是host模式，则需要生成hostname
 		daemon.generateHostname(id, config)
 	}
 	entrypoint, args := daemon.getEntrypointAndArgs(config.Entrypoint, config.Cmd)
@@ -154,6 +156,7 @@ func (daemon *Daemon) newContainer(name string, operatingSystem string, config *
 	base.Path = entrypoint
 	base.Args = args //FIXME: de-duplicate from config
 	base.Config = config
+	//cyz-> 这个地方将base的HostConfig设为一个空的HostConfig，而没有用hostConfig
 	base.HostConfig = &containertypes.HostConfig{}
 	base.ImageID = imgID
 	base.NetworkSettings = &network.Settings{IsAnonymousEndpoint: noExplicitName}

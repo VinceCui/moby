@@ -207,17 +207,20 @@ func (is *store) Search(term string) (ID, error) {
 func (is *store) Get(id ID) (*Image, error) {
 	// todo: Check if image is in images
 	// todo: Detect manual insertions and start using them
+	//cyz-> Get从/var/lib/docker/image/aufs/imagedb/content/sha256/#xx 读取配置信息生成byte[]
 	config, err := is.fs.Get(id.Digest())
 	if err != nil {
 		return nil, err
 	}
 
+	//cyz-> 从byte[]生成一个新的image
 	img, err := NewFromJSON(config)
 	if err != nil {
 		return nil, err
 	}
 	img.computedID = id
 
+	//cyz-> 设置img的父image
 	img.Parent, err = is.GetParent(id)
 	if err != nil {
 		img.Parent = ""

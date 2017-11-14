@@ -493,6 +493,7 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 
 	ls.mountL.Lock()
 	defer ls.mountL.Unlock()
+	//cyz-> 搜寻MountedLayer，如果找到就冲突出错了。
 	m, ok := ls.mounts[name]
 	if ok {
 		return nil, ErrMountNameConflict
@@ -502,6 +503,7 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 	var pid string
 	var p *roLayer
 	if string(parent) != "" {
+		//cyz-> 根据每个image.RootFS.ChainID()会生成一个chainID，对应layerStore里的一个layer。
 		p = ls.get(parent)
 		if p == nil {
 			return nil, ErrLayerDoesNotExist
@@ -521,11 +523,13 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 	m = &mountedLayer{
 		name:       name,
 		parent:     p,
+		//cyz-> mountID是一个随机生成的ID
 		mountID:    ls.mountID(name),
 		layerStore: ls,
 		references: map[RWLayer]*referencedRWLayer{},
 	}
 
+	//cyz-> 创建init layer
 	if initFunc != nil {
 		pid, err = ls.initMount(m.mountID, pid, mountLabel, initFunc, storageOpt)
 		if err != nil {
@@ -538,6 +542,8 @@ func (ls *layerStore) CreateRWLayer(name string, parent ChainID, opts *CreateRWL
 		StorageOpt: storageOpt,
 	}
 
+	//cyz-> 创建rw layer，注意，此处pid已经变为了initID，所以rw layer里的父layer会比init的多一个initID。
+	//这里不挂载rw layer，当调用daemon.Mount时才会挂载
 	if err = ls.driver.CreateReadWrite(m.mountID, pid, createOpts); err != nil {
 		return nil, err
 	}
@@ -618,6 +624,8 @@ func (ls *layerStore) ReleaseRWLayer(l RWLayer) ([]Metadata, error) {
 	return []Metadata{}, nil
 }
 
+//cyz-> 在config.Root/image/driver.name/layerdb/mounts/下建立以容器id为名的目录，
+//下面建立（init-id, mount-id, parent）3个文件，存储container的init-id, mount-id和它创建时依赖的layer即parent。
 func (ls *layerStore) saveMount(mount *mountedLayer) error {
 	if err := ls.store.SetMountID(mount.name, mount.mountID); err != nil {
 		return err
@@ -655,16 +663,32 @@ func (ls *layerStore) initMount(graphID, parent, mountLabel string, initFunc Mou
 	if err := ls.driver.CreateReadWrite(initID, parent, createOpts); err != nil {
 		return "", err
 	}
+	//cyz-> 这个函数很厉害，判断一个layer是否有父layer，如果有，利用diff中的父layer的文件夹和自己的文件夹aufs
+	//挂载在mnt中自己的文件夹；如果没有，返回diff中的自己文件夹
+	//临时挂载是为了创建初始文件。
 	p, err := ls.driver.Get(initID, "")
 	if err != nil {
 		return "", err
 	}
 
+	/*cyz-> 重新创建了string{
+		"/dev/pts":         "dir",
+		"/dev/shm":         "dir",
+		"/proc":            "dir",
+		"/sys":             "dir",
+		"/.dockerenv":      "file",
+		"/etc/resolv.conf": "file",
+		"/etc/hosts":       "file",
+		"/etc/hostname":    "file",
+		"/dev/console":     "file",
+		"/etc/mtab":        "/proc/mounts",
+	}*/
 	if err := initFunc(p); err != nil {
 		ls.driver.Put(initID)
 		return "", err
 	}
 
+	//cyz-> Put unmounts and updates list of active mounts. 
 	if err := ls.driver.Put(initID); err != nil {
 		return "", err
 	}

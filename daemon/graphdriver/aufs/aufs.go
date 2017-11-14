@@ -246,6 +246,7 @@ func (a *Driver) CreateReadWrite(id, parent string, opts *graphdriver.CreateOpts
 
 // Create three folders for each id
 // mnt, layers, and diff
+//cyz-> 位于"config.Root/aufs"，此处可以反过来理解，每个id文件夹下有这三个文件夹，和这三个文件夹都有一个id文件夹，意义相同。
 func (a *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) error {
 
 	if opts != nil && len(opts.StorageOpt) != 0 {
@@ -256,21 +257,26 @@ func (a *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) error {
 		return err
 	}
 	// Write the layers metadata
+	//cyz-> a.rootPath()="config.Root/aufs"
 	f, err := os.Create(path.Join(a.rootPath(), "layers", id))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
+	//cyz-> 为了验证该要创建的layer所依赖的layer的cacheid里存的他依赖的parents都能被有效读取
 	if parent != "" {
+		//cyz-> parent=layer.cacheid，getParentIDs()读取config.Root/aufs/layers/#parent文件，里面是一些ids
 		ids, err := getParentIDs(a.rootPath(), parent)
 		if err != nil {
 			return err
 		}
 
+		//cyz-> 将该layer的父layer的id写入新创建的文件f
 		if _, err := fmt.Fprintln(f, parent); err != nil {
 			return err
 		}
+		//cyz-> 将该layer的父layer的父layer的id写入新创建的文件f
 		for _, i := range ids {
 			if _, err := fmt.Fprintln(f, i); err != nil {
 				return err
@@ -396,9 +402,12 @@ func atomicRemove(source string) error {
 
 // Get returns the rootfs path for the id.
 // This will mount the dir at its given path
+//cyz-> 这个函数很厉害，判断一个layer是否有父layer，如果有，利用diff中的父layer的文件夹和自己的文件夹aufs
+//挂载在mnt中自己的文件夹；如果没有，返回diff中的自己文件夹
 func (a *Driver) Get(id, mountLabel string) (containerfs.ContainerFS, error) {
 	a.locker.Lock(id)
 	defer a.locker.Unlock(id)
+	//cyz-> Get the diff paths for all the parent ids
 	parents, err := a.getParentLayerPaths(id)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
@@ -447,6 +456,7 @@ func (a *Driver) Put(id string) error {
 		return nil
 	}
 
+	//cyz-> 当Get返回的是diff时，并没有mount，此时unmount难道不会出错吗？此处存疑？？？
 	err := a.unmount(m)
 	if err != nil {
 		logrus.Debugf("Failed to unmount %s aufs: %v", id, err)

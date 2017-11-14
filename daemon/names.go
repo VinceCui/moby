@@ -34,6 +34,7 @@ func (daemon *Daemon) registerName(container *container.Container) error {
 	return daemon.containersReplica.ReserveName(container.Name, container.ID)
 }
 
+//cyz-> 生成新id，生成新name，并且利用daemon.containersReplica.ReserveName将生成id、name保留。
 func (daemon *Daemon) generateIDAndName(name string) (string, string, error) {
 	var (
 		err error
@@ -80,6 +81,7 @@ func (daemon *Daemon) releaseName(name string) {
 	daemon.containersReplica.ReleaseName(name)
 }
 
+//cyz-> 利用namesgenerator生成一个随机名字
 func (daemon *Daemon) generateNewName(id string) (string, error) {
 	var name string
 	for i := 0; i < 6; i++ {
