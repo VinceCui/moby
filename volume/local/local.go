@@ -46,6 +46,7 @@ type activeMount struct {
 // New instantiates a new Root instance with the provided scope. Scope
 // is the base path that the Root instance uses to store its
 // volumes. The base path is created here if it does not exist.
+//cyz-> 在config.Root下创建"volumes"文件夹
 func New(scope string, rootIDs idtools.IDPair) (*Root, error) {
 	rootDirectory := filepath.Join(scope, volumesPathName)
 
@@ -95,6 +96,7 @@ func New(scope string, rootIDs idtools.IDPair) (*Root, error) {
 			}
 
 			// unmount anything that may still be mounted (for example, from an unclean shutdown)
+			//cyz-> 这将任何挂载在volumes下目录的挂载取消
 			for _, info := range mountInfos {
 				if info.Mountpoint == v.path {
 					mount.Unmount(v.path)

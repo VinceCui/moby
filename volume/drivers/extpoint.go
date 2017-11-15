@@ -113,9 +113,11 @@ func (driverNotFoundError) NotFound() {}
 // driver with the given name has not been registered it checks if
 // there is a VolumeDriver plugin available with the given name.
 func lookup(name string, mode int) (volume.Driver, error) {
+	//cyz-> 对每个name加lock使得同一name的go程不会同时进行从而可能创建多次
 	drivers.driverLock.Lock(name)
 	defer drivers.driverLock.Unlock(name)
 
+	//cyz-> 对drivers.extensions[name]操作加锁是为了防止多线程导致的冲突
 	drivers.Lock()
 	ext, ok := drivers.extensions[name]
 	drivers.Unlock()

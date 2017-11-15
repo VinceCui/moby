@@ -9,6 +9,7 @@ import (
 
 // GetMounts retrieves a list of mounts for the current running process.
 func GetMounts() ([]*Info, error) {
+	//cyz-> 这分析了/proc/self/mountinfo 
 	return parseMountTable()
 }
 

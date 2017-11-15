@@ -142,6 +142,10 @@ func (daemon *Daemon) HasExperimental() bool {
 	return daemon.configStore != nil && daemon.configStore.Experimental
 }
 
+//cyz-> 读取repository生成containers，利用containerd恢复它们；成功运行的设置状态，
+//	另外的根据container的配置生成restart决定是restart还是remove。完成之后对运行的container准备mount
+//	这都是在多线程进行。同时，还initNetworkController，registerLinks(--link)。
+//	同时，还时不时地保存replica。
 func (daemon *Daemon) restore() error {
 	containers := make(map[string]*container.Container)
 
@@ -155,7 +159,7 @@ func (daemon *Daemon) restore() error {
 	//cyz-> daemon.repository存放当前运行的所有containers，这个for重置这些containers的rw layer
 	for _, v := range dir {
 		id := v.Name()
-		//cyz-> 创建一个新的BaseContainer并从存储的hostconfig.json生成config，如果生成的container的id和原id不同，出错
+		//cyz-> 创建一个新的BaseContainer并从存储的hostconfig.json生成config，如果json的container的id和目录的id不同，出错
 		container, err := daemon.load(id)
 		if err != nil {
 			logrus.Errorf("Failed to load container %v: %v", id, err)
@@ -184,6 +188,7 @@ func (daemon *Daemon) restore() error {
 	restartContainers := make(map[*container.Container]chan struct{})
 	activeSandboxes := make(map[string]interface{})
 	for id, c := range containers {
+		//cyz-> 注册名字以防重名
 		if err := daemon.registerName(c); err != nil {
 			logrus.Errorf("Failed to register container name %s: %s", c.ID, err)
 			delete(containers, id)
@@ -194,6 +199,7 @@ func (daemon *Daemon) restore() error {
 			// don't skip the container due to error
 			logrus.Errorf("Failed to verify volumes for container '%s': %v", c.ID, err)
 		}
+		//cyz-> 将c保存进daemon.containers，绑定stdin,stdout,stderr。并利用CheckpointTo将container状态保存进d.containersReplica
 		if err := daemon.Register(c); err != nil {
 			logrus.Errorf("Failed to register container %s: %s", c.ID, err)
 			delete(containers, id)
@@ -219,11 +225,13 @@ func (daemon *Daemon) restore() error {
 		wg.Add(1)
 		go func(c *container.Container) {
 			defer wg.Done()
+			//cyz-> 对c的某些mount进行移植
 			daemon.backportMountSpec(c)
 			if err := daemon.checkpointAndSave(c); err != nil {
 				logrus.WithError(err).WithField("container", c.ID).Error("error saving backported mountspec to disk")
 			}
 
+			//cyz-> 根据c的StateString设置stateCtr里c的相应状态
 			daemon.setStateCounter(c)
 
 			logrus.WithFields(logrus.Fields{
@@ -239,6 +247,7 @@ func (daemon *Daemon) restore() error {
 				exitedAt time.Time
 			)
 
+			//cyz-> 此处调用containerd恢复c
 			alive, _, err = daemon.containerd.Restore(context.Background(), c.ID, c.InitializeStdio)
 			if err != nil && !errdefs.IsNotFound(err) {
 				logrus.Errorf("Failed to restore container %s with containerd: %s", c.ID, err)
@@ -296,6 +305,7 @@ func (daemon *Daemon) restore() error {
 				}
 
 				// we call Mount and then Unmount to get BaseFs of the container
+				//cyz-> 尝试mount看看，失败就崩了
 				if err := daemon.Mount(c); err != nil {
 					// The mount is unlikely to fail. However, in case mount fails
 					// the container should be allowed to restore here. Some functionalities
@@ -311,6 +321,7 @@ func (daemon *Daemon) restore() error {
 				}
 
 				c.ResetRestartManager(false)
+				//cyz-> 如果不是container模式的网络且在运行，就建立一个sandbox
 				if !c.HostConfig.NetworkMode.IsContainer() && c.IsRunning() {
 					options, err := daemon.buildSandboxOptions(c)
 					if err != nil {
@@ -373,6 +384,7 @@ func (daemon *Daemon) restore() error {
 		}
 	}
 
+	//cyz-> 利用多线程重启需要重启的containers
 	group := sync.WaitGroup{}
 	for c, notifier := range restartContainers {
 		group.Add(1)
@@ -384,6 +396,7 @@ func (daemon *Daemon) restore() error {
 
 			// ignore errors here as this is a best effort to wait for children to be
 			//   running before we try to start the container
+			//cyz-> 等待5s来开启children，忽略错误
 			children := daemon.children(c)
 			timeout := time.After(5 * time.Second)
 			for _, child := range children {
@@ -397,6 +410,7 @@ func (daemon *Daemon) restore() error {
 
 			// Make sure networks are available before starting
 			daemon.waitForNetworks(c)
+			//cyz-> 等待网络后利用下面的函数开启c
 			if err := daemon.containerStart(c, "", "", true); err != nil {
 				logrus.Errorf("Failed to start container %s: %s", c.ID, err)
 			}
@@ -406,6 +420,7 @@ func (daemon *Daemon) restore() error {
 	}
 	group.Wait()
 
+	//cyz-> 利用多线程移除需要移除的containers
 	removeGroup := sync.WaitGroup{}
 	for id := range removeContainers {
 		removeGroup.Add(1)
@@ -845,7 +860,8 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 		d.stores[operatingSystem] = ds
 	}
 
-	// Configure the volumes driver，此处存疑？？？
+	// Configure the volumes driver
+	//cyz-> 注册local volume driver和plugin driver，并根据相应文件创建一个bolt.DB，它保存了vol store信息。
 	volStore, err := d.configureVolumes(rootIDs)
 	if err != nil {
 		return nil, err
@@ -922,6 +938,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 	//cyz-> 存储containers的store，放在memory中的。
 	d.containers = container.NewMemoryStore()
 	//cyz-> replica是复制品的意思，d.containersReplica、container.NewViewDB()？此处存疑？？？
+	//cyz-> 用于保存containers目前的状态？
 	if d.containersReplica, err = container.NewViewDB(); err != nil {
 		return nil, err
 	}
@@ -1226,16 +1243,22 @@ func setDefaultMtu(conf *config.Config) {
 }
 
 func (daemon *Daemon) configureVolumes(rootIDs idtools.IDPair) (*store.VolumeStore, error) {
+	//cyz-> 这创建了一个local Driver，也可以通过--driver=xxxx 来指定一个plugin Driver
 	volumesDriver, err := local.New(daemon.configStore.Root, rootIDs)
 	if err != nil {
 		return nil, err
 	}
 
+	//cyz-> 通过--driver=xxxx 来指定一个plugin Driver存储在daemon.PluginStore中
+	//cyz-> 注册plugin driver
 	volumedrivers.RegisterPluginGetter(daemon.PluginStore)
 
+	//cyz-> 注册local Driver
 	if !volumedrivers.Register(volumesDriver, volumesDriver.Name()) {
 		return nil, errors.New("local volume driver could not be registered")
 	}
+
+	//cyz-> 利用config.Root/volumes/metadata.db文件创建一个bolt.DB，并根据DB内容进行了restore，创建了vol store。
 	return store.New(daemon.configStore.Root)
 }
 

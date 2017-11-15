@@ -859,6 +859,7 @@ func configureKernelSecuritySupport(config *config.Config, driverNames []string)
 	return nil
 }
 
+//cyz-> 如果有activeSandboxes，直接返回controller，否则根据config依次创建"none","host","bridge"三个网络
 func (daemon *Daemon) initNetworkController(config *config.Config, activeSandboxes map[string]interface{}) (libnetwork.NetworkController, error) {
 	netOptions, err := daemon.networkOptions(config, daemon.PluginStore, activeSandboxes)
 	if err != nil {

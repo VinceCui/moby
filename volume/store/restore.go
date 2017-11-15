@@ -17,6 +17,7 @@ import (
 // out of band.
 func (s *VolumeStore) restore() {
 	var ls []volumeMetadata
+	//cyz-> 在bolt.DB中查询volume metadata list
 	s.db.View(func(tx *bolt.Tx) error {
 		ls = listMeta(tx)
 		return nil
@@ -24,6 +25,7 @@ func (s *VolumeStore) restore() {
 
 	chRemove := make(chan *volumeMetadata, len(ls))
 	var wg sync.WaitGroup
+	//cyz-> 对list每个metadata（即一个volume），创建一个go程创建它的driver并将volume保存，将需要移除的vol放入chRemove
 	for _, meta := range ls {
 		wg.Add(1)
 		// this is potentially a very slow operation, so do it in a goroutine
@@ -59,6 +61,7 @@ func (s *VolumeStore) restore() {
 			}
 
 			// increment driver refcount
+			//cyz-> local属于长存的，不会加refcount；plugin driver也只会加1引用，同样的访问会直接返回，因为在存储中找到了。
 			volumedrivers.CreateDriver(meta.Driver)
 
 			// cache the volume
@@ -70,6 +73,7 @@ func (s *VolumeStore) restore() {
 		}(meta)
 	}
 
+	//cyz-> 等待所有go程完成然后关闭chRemove，在bolt.DB中移除这些vol
 	wg.Wait()
 	close(chRemove)
 	s.db.Update(func(tx *bolt.Tx) error {

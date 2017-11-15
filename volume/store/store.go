@@ -64,6 +64,7 @@ func New(rootPath string) (*VolumeStore, error) {
 		options: make(map[string]map[string]string),
 	}
 
+	//cyz-> 利用config.Root/volumes/metadata.db文件创建一个bolt.DB，如果未指定rootPath，则说明vs.db已经设置，不需要这一步
 	if rootPath != "" {
 		// initialize metadata store
 		volPath := filepath.Join(rootPath, volumeDataDir)
@@ -74,6 +75,8 @@ func New(rootPath string) (*VolumeStore, error) {
 		dbPath := filepath.Join(volPath, "metadata.db")
 
 		var err error
+		//cyz-> Bolt就是这么一个纯粹的Go语言版的嵌入式key/value的数据库，而且在Go的应用中很方便地去用作持久化。
+		//利用config.Root/volumes/metadata.db文件创建一个bolt.DB
 		vs.db, err = bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 		if err != nil {
 			return nil, errors.Wrap(err, "error while opening volume store metadata database")

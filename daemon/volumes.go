@@ -252,10 +252,12 @@ func (daemon *Daemon) lazyInitializeVolume(containerID string, m *volume.MountPo
 // The container lock should not be held when calling this function.
 // Changes are only made in-memory and may make changes to containers referenced
 // by `container.HostConfig.VolumesFrom`
+//cyz-> 有一些mount可能需要进行backport（移植）
 func (daemon *Daemon) backportMountSpec(container *container.Container) {
 	container.Lock()
 	defer container.Unlock()
 
+	//cyz-> 根据不同的os返回相应的parser
 	parser := volume.NewParser(container.OS)
 
 	maybeUpdate := make(map[string]bool)
