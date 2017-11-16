@@ -859,7 +859,8 @@ func configureKernelSecuritySupport(config *config.Config, driverNames []string)
 	return nil
 }
 
-//cyz-> 如果有activeSandboxes，直接返回controller，否则根据config依次创建"none","host","bridge"三个网络
+//cyz-> 如果有activeSandboxes，说明有old running containers，它们需要使用原有的network，所以不能更改config，直接返回controller，
+//否则根据config依次创建"none","host","bridge"三个网络，如果有老的bridge，先删掉它。
 func (daemon *Daemon) initNetworkController(config *config.Config, activeSandboxes map[string]interface{}) (libnetwork.NetworkController, error) {
 	netOptions, err := daemon.networkOptions(config, daemon.PluginStore, activeSandboxes)
 	if err != nil {
@@ -922,6 +923,7 @@ func driverOptions(config *config.Config) []nwconfig.Option {
 	return dOptions
 }
 
+//cyz-> 处理一些config，真正创建网络还得需要调用libnetwork的NewNetwork()
 func initBridgeDriver(controller libnetwork.NetworkController, config *config.Config) error {
 	bridgeName := bridge.DefaultBridgeName
 	if config.BridgeConfig.Iface != "" {
@@ -936,6 +938,7 @@ func initBridgeDriver(controller libnetwork.NetworkController, config *config.Co
 	}
 
 	// --ip processing
+	//cyz->  Default IP when binding container ports (default 0.0.0.0, 表示本机所有可用ip)
 	if config.BridgeConfig.DefaultIP != nil {
 		netOption[bridge.DefaultBindingIP] = config.BridgeConfig.DefaultIP.String()
 	}
@@ -947,6 +950,8 @@ func initBridgeDriver(controller libnetwork.NetworkController, config *config.Co
 
 	ipamV4Conf = &libnetwork.IpamConf{AuxAddresses: make(map[string]string)}
 
+	//cyz-> ElectInterfaceAddresses looks for an interface on the OS with 
+	//the specified name and returns returns all its IPv4 and IPv6 addresses in CIDR notation.
 	nwList, nw6List, err := netutils.ElectInterfaceAddresses(bridgeName)
 	if err != nil {
 		return errors.Wrap(err, "list bridge addresses failed")
@@ -973,6 +978,7 @@ func initBridgeDriver(controller libnetwork.NetworkController, config *config.Co
 		ipamV4Conf.Gateway = nw.IP.String()
 	}
 
+	//cyz-> --bip string指定网桥的地址
 	if config.BridgeConfig.IP != "" {
 		ipamV4Conf.PreferredPool = config.BridgeConfig.IP
 		ip, _, err := net.ParseCIDR(config.BridgeConfig.IP)
@@ -993,6 +999,7 @@ func initBridgeDriver(controller libnetwork.NetworkController, config *config.Co
 		ipamV4Conf.SubPool = fCIDR.String()
 	}
 
+	//cyz-> --default-gateway ip 指定默认网关
 	if config.BridgeConfig.DefaultGatewayIPv4 != nil {
 		ipamV4Conf.AuxAddresses["DefaultGatewayIPv4"] = config.BridgeConfig.DefaultGatewayIPv4.String()
 	}
@@ -1042,6 +1049,7 @@ func initBridgeDriver(controller libnetwork.NetworkController, config *config.Co
 		v6Conf = append(v6Conf, ipamV6Conf)
 	}
 	// Initialize default network on "bridge" with the same name
+	//cyz-> 真正创建网络还得需要使用libnetwork
 	_, err = controller.NewNetwork("bridge", "bridge", "",
 		libnetwork.NetworkOptionEnableIPv6(config.BridgeConfig.EnableIPv6),
 		libnetwork.NetworkOptionDriverOpts(netOption),

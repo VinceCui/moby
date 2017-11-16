@@ -175,6 +175,7 @@ func (cfg *ScopeCfg) IsValid() bool {
 }
 
 //Key provides convenient method to create a Key
+//cyz-> 生成docker/network/v1.0/key/
 func Key(key ...string) string {
 	keychain := append(rootChain, key...)
 	str := strings.Join(keychain, "/")

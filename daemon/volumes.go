@@ -140,6 +140,7 @@ func (daemon *Daemon) registerMountPoints(container *container.Container, hostCo
 	}
 
 	// 3. Read bind mounts
+	//cyz-> volume也属于一种bind，下面有判断，对于volume需要创建volume，而纯粹的bind不需要
 	for _, b := range hostConfig.Binds {
 		bind, err := parser.ParseMountRaw(b, hostConfig.VolumeDriver)
 		if err != nil {
@@ -236,6 +237,7 @@ func (daemon *Daemon) registerMountPoints(container *container.Container, hostCo
 
 // lazyInitializeVolume initializes a mountpoint's volume if needed.
 // This happens after a daemon restart.
+//cyz-> 从daemon.volumes中获取一个volume
 func (daemon *Daemon) lazyInitializeVolume(containerID string, m *volume.MountPoint) error {
 	if len(m.Driver) > 0 && m.Volume == nil {
 		v, err := daemon.volumes.GetWithRef(m.Name, m.Driver, containerID)

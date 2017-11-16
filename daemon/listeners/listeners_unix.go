@@ -33,6 +33,7 @@ func Init(proto, addr, socketGroup string, tlsConfig *tls.Config) ([]net.Listene
 		}
 		ls = append(ls, l)
 	case "unix":
+		//cyz-> 在dockerd --group string指定Group for the unix socket (default "docker")，
 		gid, err := lookupGID(socketGroup)
 		if err != nil {
 			if socketGroup != "" {
@@ -41,6 +42,7 @@ func Init(proto, addr, socketGroup string, tlsConfig *tls.Config) ([]net.Listene
 				}
 				logrus.Warnf("could not change group %s to %s: %v", addr, defaultSocketGroup, err)
 			}
+			//cyz-> 如果没有，就用当前的gid
 			gid = os.Getgid()
 		}
 		l, err := sockets.NewUnixSocket(addr, gid)

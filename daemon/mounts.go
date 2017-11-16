@@ -9,6 +9,7 @@ import (
 	volumestore "github.com/docker/docker/volume/store"
 )
 
+//cyz-> 从daemon.volumes中为每个container取得相应的volume
 func (daemon *Daemon) prepareMountPoints(container *container.Container) error {
 	for _, config := range container.MountPoints {
 		if err := daemon.lazyInitializeVolume(container.ID, config); err != nil {

@@ -431,7 +431,7 @@ func (daemon *Daemon) restore() error {
 			removeGroup.Done()
 		}(id)
 	}
-	removeGroup.Wait()
+	removeGroup.Wait() 
 
 	// any containers that were started above would already have had this done,
 	// however we need to now prepare the mountpoints for the rest of the containers as well.
@@ -453,6 +453,7 @@ func (daemon *Daemon) restore() error {
 		group.Add(1)
 		go func(c *container.Container) {
 			defer group.Done()
+			//cyz-> 从daemon.volumes中为每个container取得相应的volume
 			if err := daemon.prepareMountPoints(c); err != nil {
 				logrus.Error(err)
 			}

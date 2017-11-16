@@ -184,7 +184,8 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	/*cyz-> 利用api/server的New方法根据serverConfig返回一个新的apiserver.Server；
 		这个很重要，它包含了*Config，[]*HTTPServer，[]router.Router，*routerSwapper和[]middleware.Middleware
-		apiserver负责监听并将请求通过mux.Router进行路由转发，此处存疑？？？还不详细------------------------------*/
+		apiserver负责监听并将请求通过mux.Router进行路由转发。
+		dockerd作为提供api的server，在这些套接字上监听，可以配置使用TLS来进行安全认证*/
 	cli.api = apiserver.New(serverConfig)
 
 	var hosts []string
@@ -237,7 +238,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 		return err
 	}
 
-	//cyz-> libcontainerd.Remote其实就是
+	//cyz-> libcontainerd.Remote其实就是containerd的代理，moby通过它来调用containerd的api
 	rOpts, err := cli.getRemoteOptions()
 	if err != nil {
 		return fmt.Errorf("Failed to generate containerd options: %s", err)
