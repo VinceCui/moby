@@ -43,12 +43,15 @@ func (c *controller) initStores() error {
 	c.stores = nil
 	c.Unlock()
 
+	//cyz-> docker network --scope指定，
+	//对不同的scope（local，global）建立不同的datastore，boltdb用于local，而consul、etcd、zookeeper用于global
 	for scope, scfg := range scopeConfigs {
 		if err := c.initScopedStore(scope, scfg); err != nil {
 			return err
 		}
 	}
 
+	//cyz-> 启动一个go程，等待信号进行Endpoint的创建和删除
 	c.startWatch()
 	return nil
 }

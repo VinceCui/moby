@@ -25,10 +25,12 @@ var (
 // Init initializes a new network namespace
 func Init() {
 	var err error
+	//cyz-> Netns allows simple network namespace handling
 	initNs, err = netns.Get()
 	if err != nil {
 		logrus.Errorf("could not get initial namespace: %v", err)
 	}
+	//cyz-> Netlink can be used to add and remove interfaces, set up ip addresses and routes, and confiugre ipsec.
 	initNl, err = netlink.NewHandle(getSupportedNlFamilies()...)
 	if err != nil {
 		logrus.Errorf("could not create netlink handle on initial namespace: %v", err)

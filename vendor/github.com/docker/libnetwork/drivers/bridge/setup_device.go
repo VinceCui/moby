@@ -35,6 +35,7 @@ func setupDevice(config *networkConfiguration, i *bridgeInterface) error {
 		setMac = kv.Kernel > 3 || (kv.Kernel == 3 && kv.Major >= 3)
 	}
 
+	//cyz-> 利用netlink建立bridge
 	if err = i.nlh.LinkAdd(i.Link); err != nil {
 		logrus.Debugf("Failed to create bridge %s via netlink. Trying ioctl", config.BridgeName)
 		return ioctlCreateBridge(config.BridgeName, setMac)

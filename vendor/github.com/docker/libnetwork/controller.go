@@ -191,6 +191,7 @@ func New(cfgOptions ...config.Option) (NetworkController, error) {
 		return nil, err
 	}
 
+	//cyz-> DrvRegistry holds the registry of all network drivers and IPAM drivers that it knows about.
 	drvRegistry, err := drvregistry.New(c.getStore(datastore.LocalScope), c.getStore(datastore.GlobalScope), c.RegisterDriver, nil, c.cfg.PluginGetter)
 	if err != nil {
 		return nil, err
@@ -210,6 +211,7 @@ func New(cfgOptions ...config.Option) (NetworkController, error) {
 		}
 	}
 
+	//cyz-> IPAM是IP address manage，IP地址管理。
 	if err = initIPAMDrivers(drvRegistry, nil, c.getStore(datastore.GlobalScope)); err != nil {
 		return nil, err
 	}
@@ -795,6 +797,7 @@ func (c *controller) NewNetwork(networkType, name string, id string, options ...
 		}()
 	}
 
+	//cyz-> 进行ip地址分配
 	err = network.ipamAllocate()
 	if err != nil {
 		return nil, err
@@ -937,6 +940,7 @@ func doReplayPoolReserve(n *network) bool {
 }
 
 func (c *controller) addNetwork(n *network) error {
+	//cyz-> 这用到了drvRegistry
 	d, err := n.driver(true)
 	if err != nil {
 		return err
@@ -947,6 +951,7 @@ func (c *controller) addNetwork(n *network) error {
 		return err
 	}
 
+	//cyz-> null for unix
 	n.startResolver()
 
 	return nil

@@ -702,6 +702,7 @@ func (d *driver) createNetwork(config *networkConfiguration) error {
 	}
 
 	// Prepare the bridge setup configuration
+	//cyz-> 这个setup器将各个函数压入一个queue，最后apply会一个个执行
 	bridgeSetup := newBridgeSetup(config, bridgeIface)
 
 	// If the bridge interface doesn't exist, we need to start the setup steps
