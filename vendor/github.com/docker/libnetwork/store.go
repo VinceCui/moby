@@ -370,6 +370,7 @@ func (c *controller) processEndpointCreate(nmap map[string]*netWatch, ep *endpoi
 
 	if ok {
 		// Update the svc db for the local endpoint join right away
+		//cyz-> 此处的svc db其实就是一个map
 		n.updateSvcRecord(ep, c.getLocalEps(nw), true)
 
 		c.Lock()

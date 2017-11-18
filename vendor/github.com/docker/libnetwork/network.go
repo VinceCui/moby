@@ -1116,6 +1116,8 @@ func (n *network) CreateEndpoint(name string, options ...EndpointOption) (Endpoi
 		ep.ipamOptions[netlabel.MacAddress] = ep.iface.mac.String()
 	}
 
+	//cyz-> postIPv6用于延迟IPV6地址分配直到endpoint已经被创建了，
+	//	让用户可以用如"fixed-cidr-v6 + address"（一个docker daemon flag）为container手动分配IPv6地址
 	if err = ep.assignAddress(ipam, true, n.enableIPv6 && !n.postIPv6); err != nil {
 		return nil, err
 	}

@@ -951,12 +951,13 @@ func initBridgeDriver(controller libnetwork.NetworkController, config *config.Co
 	ipamV4Conf = &libnetwork.IpamConf{AuxAddresses: make(map[string]string)}
 
 	//cyz-> ElectInterfaceAddresses looks for an interface on the OS with 
-	//the specified name and returns returns all its IPv4 and IPv6 addresses in CIDR notation.
+	//the specified name and returns all its IPv4 and IPv6 addresses in CIDR notation.
 	nwList, nw6List, err := netutils.ElectInterfaceAddresses(bridgeName)
 	if err != nil {
 		return errors.Wrap(err, "list bridge addresses failed")
 	}
 
+	//cyz-> 默认使用找到的第一个*net.IPNet，除非用--fix-cidr string指定的域包含了nwList其中一个
 	nw := nwList[0]
 	if len(nwList) > 1 && config.BridgeConfig.FixedCIDR != "" {
 		_, fCIDR, err := net.ParseCIDR(config.BridgeConfig.FixedCIDR)
