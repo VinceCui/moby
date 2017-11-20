@@ -957,6 +957,7 @@ func (d *driver) CreateEndpoint(nid, eid string, ifInfo driverapi.InterfaceInfo,
 		}
 	}()
 
+	//cyz-> 这一段生成了两个veth，一个用于host一个用于container，让它们相连并测试是否成功。
 	// Generate a name for what will be the host side pipe interface
 	hostIfName, err := netutils.GenerateIfaceName(d.nlh, vethPrefix, vethLen)
 	if err != nil {
@@ -1016,6 +1017,7 @@ func (d *driver) CreateEndpoint(nid, eid string, ifInfo driverapi.InterfaceInfo,
 	}
 
 	// Attach host side pipe interface into the bridge
+	//cyz-> 先尝试用netlink将host端veth加入bridge，如果不行再试试ioctl
 	if err = addToBridge(d.nlh, hostIfName, config.BridgeName); err != nil {
 		return fmt.Errorf("adding interface %s to bridge %s failed: %v", hostIfName, config.BridgeName, err)
 	}

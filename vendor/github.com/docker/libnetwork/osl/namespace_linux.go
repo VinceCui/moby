@@ -78,6 +78,7 @@ func createBasePath() {
 	go removeUnusedPaths()
 }
 
+//cyz-> 垃圾管理有一个定时器，或者可以被GC立即启动
 func removeUnusedPaths() {
 	gpmLock.Lock()
 	period := gpmCleanupPeriod
@@ -195,6 +196,8 @@ func GenerateKey(containerID string) string {
 // provided a key which uniquely identifies the sandbox
 func NewSandbox(key string, osCreate, isRestore bool) (Sandbox, error) {
 	if !isRestore {
+		//cyz-> 请看Namespace原理那一章，这个函数在"/var/run/docker/netns"创建了一个新的文件，
+		//reexec一个进程，并将/proc/[pid]/ns/net文件指向它。
 		err := createNetworkNamespace(key, osCreate)
 		if err != nil {
 			return nil, err
@@ -211,6 +214,8 @@ func NewSandbox(key string, osCreate, isRestore bool) (Sandbox, error) {
 	}
 	defer sboxNs.Close()
 
+	//cyz-> NewHandle returns a netlink handle on the network namespace specified by ns. 
+	//If ns=netns.None(), current network namespace will be assumed
 	n.nlHandle, err = netlink.NewHandleAt(sboxNs, syscall.NETLINK_ROUTE)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a netlink handle: %v", err)
@@ -229,6 +234,7 @@ func NewSandbox(key string, osCreate, isRestore bool) (Sandbox, error) {
 		}
 	}
 
+	//cyz-> 设置lo
 	if err = n.loopbackUp(); err != nil {
 		n.nlHandle.Delete()
 		return nil, err

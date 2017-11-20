@@ -409,6 +409,7 @@ func (c *controller) processEndpointCreate(nmap map[string]*netWatch, ep *endpoi
 		return
 	}
 
+	//cyz-> 在store（kv db）中看EndpointCnt有没有改变。
 	ch, err := store.Watch(n.getEpCnt(), nw.stopCh)
 	if err != nil {
 		logrus.Warnf("Error creating watch for network: %v", err)

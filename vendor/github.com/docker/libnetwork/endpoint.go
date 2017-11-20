@@ -686,6 +686,7 @@ func (ep *endpoint) Leave(sbox Sandbox, options ...EndpointOption) error {
 		return types.BadRequestErrorf("not a valid Sandbox interface")
 	}
 
+	//cyz-> 这两个函数用于对join/leave进行互斥控制。
 	sb.joinLeaveStart()
 	defer sb.joinLeaveEnd()
 
