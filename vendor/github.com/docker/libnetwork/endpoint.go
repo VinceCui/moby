@@ -472,6 +472,7 @@ func (ep *endpoint) sbJoin(sb *sandbox, options ...EndpointOption) (err error) {
 		return fmt.Errorf("failed to get driver during join: %v", err)
 	}
 
+	//cyz-> endpoint.srcName存储着veth pair给Container的那一个被存在joinInfo中
 	err = d.Join(nid, epid, sb.Key(), ep, sb.Labels())
 	if err != nil {
 		return err

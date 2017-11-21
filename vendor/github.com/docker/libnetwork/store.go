@@ -51,7 +51,7 @@ func (c *controller) initStores() error {
 		}
 	}
 
-	//cyz-> 启动一个go程，等待信号进行Endpoint的创建和删除
+	//cyz-> 启动一个go程，管理各个network的Endpoints的name,alias,ip映射关系，这在network上将ip和Endpoint一一对应。
 	c.startWatch()
 	return nil
 }
@@ -370,7 +370,8 @@ func (c *controller) processEndpointCreate(nmap map[string]*netWatch, ep *endpoi
 
 	if ok {
 		// Update the svc db for the local endpoint join right away
-		//cyz-> 此处的svc db其实就是一个map
+		//cyz-> 此处的svc db其实就是一个map，
+		//它保存了各个Endpoint的ip、name、alias之间的映射关系，其他的Endpoint通过svc db来连接到指定的Endpoint
 		n.updateSvcRecord(ep, c.getLocalEps(nw), true)
 
 		c.Lock()
@@ -416,6 +417,7 @@ func (c *controller) processEndpointCreate(nmap map[string]*netWatch, ep *endpoi
 		return
 	}
 
+	//cyz-> 启动一个go程，对network上的Endpoint情况进行监测，并实时更新到store
 	go c.networkWatchLoop(nw, ep, ch)
 }
 
@@ -462,6 +464,8 @@ func (c *controller) watchLoop() {
 	}
 }
 
+//cyz-> 对networks的Endpoint情况进行监控的go程，
+//利用watchSvcRecord来添加一个Endpoint至相应network，利用unWatchSvcRecord来删除一个Endpoint从相应network，
 func (c *controller) startWatch() {
 	if c.watchCh != nil {
 		return

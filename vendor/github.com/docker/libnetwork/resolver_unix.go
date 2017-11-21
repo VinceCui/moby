@@ -37,6 +37,9 @@ func reexecSetupResolver() {
 
 	resolverIP, ipPort, _ := net.SplitHostPort(os.Args[2])
 	_, tcpPort, _ := net.SplitHostPort(os.Args[3])
+	//cyz-> 请注意iptables的阅读，-t表示tables，不同的tables实现不同的功能，-d/s表示目的/源地址是什么的包，
+	//"-j DNAT --to-destination xxx"表示对包的目的地址进行地址转换，转换为xxx。
+	//这一段将对resolverIP:53的请求重定向到resolverIP:ipPort，将来自resolverIP:ipPort的响应变为来自resolverIP:53的请求
 	rules := [][]string{
 		{"-t", "nat", "-I", outputChain, "-d", resolverIP, "-p", "udp", "--dport", dnsPort, "-j", "DNAT", "--to-destination", os.Args[2]},
 		{"-t", "nat", "-I", postroutingchain, "-s", resolverIP, "-p", "udp", "--sport", ipPort, "-j", "SNAT", "--to-source", ":" + dnsPort},

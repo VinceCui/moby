@@ -110,6 +110,7 @@ func NewResolver(address string, proxyDNS bool, resolverKey string, backend DNSB
 	}
 }
 
+//cyz-> 如果port为0，则一个随机的数字将被选择为port
 func (r *resolver) SetupFunc(port int) func() {
 	return (func() {
 		var err error

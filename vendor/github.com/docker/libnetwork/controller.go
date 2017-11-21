@@ -238,6 +238,7 @@ func New(cfgOptions ...config.Option) (NetworkController, error) {
 	c.cleanupLocalEndpoints()
 	c.networkCleanup()
 
+	//cyz-> 此处存疑？？？-----------------------------------------------------------------
 	if err := c.startExternalKeyListener(); err != nil {
 		return nil, err
 	}
@@ -1065,6 +1066,7 @@ func (c *controller) NewSandbox(containerID string, options ...SandboxOption) (S
 
 	sb.processOptions(options...)
 
+	//cyz-> 此处存疑？？？
 	c.Lock()
 	if sb.ingress && c.ingressSandbox != nil {
 		c.Unlock()
@@ -1090,10 +1092,14 @@ func (c *controller) NewSandbox(containerID string, options ...SandboxOption) (S
 		}
 	}()
 
+	//cyz-> 更改host file和父亲们（--link）的host file
 	if err = sb.setupResolutionFiles(); err != nil {
 		return nil, err
 	}
 
+	//cyz-> Sandbox的key是根据Container的id生成的，用于创建network Namespace的文件
+	//osl.NewSandbox(Key, osCreate, restore)，第二个参数如果为true，就创建新的network Namespace
+	//cyz-> useDefaultSandBox是啥，此处存疑？？？---------------------------------
 	if sb.config.useDefaultSandBox {
 		c.sboxOnce.Do(func() {
 			c.defOsSbox, err = osl.NewSandbox(sb.Key(), false, false)

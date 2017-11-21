@@ -1228,6 +1228,7 @@ func (d *driver) Join(nid, eid string, sboxKey string, jinfo driverapi.JoinInfo,
 	if network.config.ContainerIfacePrefix != "" {
 		containerVethPrefix = network.config.ContainerIfacePrefix
 	}
+	//cyz-> endpoint.srcName存储着veth pair给Container的那一个
 	err = iNames.SetNames(endpoint.srcName, containerVethPrefix)
 	if err != nil {
 		return err

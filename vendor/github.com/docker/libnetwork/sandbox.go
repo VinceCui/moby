@@ -807,6 +807,7 @@ func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
 	i := ep.iface
 	ep.Unlock()
 
+	//cyz-> 启动一个Embedded DNS in user-defined networks
 	if ep.needResolver() {
 		sb.startResolver(false)
 	}
@@ -825,6 +826,7 @@ func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
 			ifaceOptions = append(ifaceOptions, sb.osSbox.InterfaceOptions().MacAddress(i.mac))
 		}
 
+		//cyz-> 获得srcName指定的给Container的那一半，先关闭它，配置它使他进入正确的net ns，然后再开启它。
 		if err := sb.osSbox.AddInterface(i.srcName, i.dstPrefix, ifaceOptions...); err != nil {
 			return fmt.Errorf("failed to add interface %s to sandbox: %v", i.srcName, err)
 		}
@@ -846,6 +848,7 @@ func (sb *sandbox) populateNetworkResources(ep *endpoint) error {
 		}
 	}
 
+	//cyz-> 设置网关
 	if ep == sb.getGatewayEndpoint() {
 		if err := sb.updateGateway(ep); err != nil {
 			return err

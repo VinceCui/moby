@@ -217,6 +217,7 @@ func (n *networkNamespace) findDst(srcName string, isBridge bool) string {
 	return ""
 }
 
+//cyz-> 获得srcName指定的给Container的那一半，先关闭它，配置它使他进入正确的net ns，然后再开启它。
 func (n *networkNamespace) AddInterface(srcName, dstPrefix string, options ...IfaceOption) error {
 	i := &nwIface{srcName: srcName, dstName: dstPrefix, ns: n}
 	i.processInterfaceOptions(options...)
