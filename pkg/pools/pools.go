@@ -78,6 +78,10 @@ func (bp *bufferPool) Put(b []byte) {
 // Copy is a convenience wrapper which uses a buffer to avoid allocation in io.Copy.
 func Copy(dst io.Writer, src io.Reader) (written int64, err error) {
 	buf := buffer32KPool.Get()
+	//cyz-> 这个会阻塞住，Copy copies from src to dst until either EOF is reached on src or an error occurs. 
+	//It returns the number of bytes copied and the first error encountered while copying, if any.
+	//CopyBuffer is identical to Copy except that it stages through the provided buffer
+	//(if one is required) rather than allocating a temporary one. 
 	written, err = io.CopyBuffer(dst, src, buf)
 	buffer32KPool.Put(buf)
 	return

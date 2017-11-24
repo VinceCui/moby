@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+//cyz-> 建立Container和其children（它link的那些Container）的link，加入env
 func (daemon *Daemon) setupLinkedContainers(container *container.Container) ([]string, error) {
 	var env []string
 	children := daemon.children(container)

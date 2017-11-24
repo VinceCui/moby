@@ -694,12 +694,14 @@ func (daemon *Daemon) populateCommonSpec(s *specs.Spec, c *container.Container) 
 	// only add the custom init if it is specified and the container is running in its
 	// own private pid namespace.  It does not make sense to add if it is running in the
 	// host namespace or another container's pid namespace where we already have an init
+	//cyz-> 如果使用了私有的pid Namespace，需要执行init。
 	if c.HostConfig.PidMode.IsPrivate() {
 		if (c.HostConfig.Init != nil && *c.HostConfig.Init) ||
 			(c.HostConfig.Init == nil && daemon.configStore.Init) {
 			s.Process.Args = append([]string{"/dev/init", "--", c.Path}, c.Args...)
 			var path string
 			if daemon.configStore.InitPath == "" {
+				//cyz-> DefaultInitBinary为“/usr/bin/docker-init”
 				path, err = exec.LookPath(daemonconfig.DefaultInitBinary)
 				if err != nil {
 					return err
@@ -726,6 +728,7 @@ func (daemon *Daemon) populateCommonSpec(s *specs.Spec, c *container.Container) 
 
 func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 	s := oci.DefaultSpec()
+	//cyz-> 设置link，设置工作目录，如果是私有pid Namespace，执行init程序
 	if err := daemon.populateCommonSpec(&s, c); err != nil {
 		return nil, err
 	}
@@ -833,10 +836,12 @@ func (daemon *Daemon) createSpec(c *container.Container) (*specs.Spec, error) {
 	ms = append(ms, c.ConfigMounts()...)
 
 	sort.Sort(mounts(ms))
+	//cyz-> 将上面所建立的所有mount存入spec
 	if err := setMounts(daemon, &s, c, ms); err != nil {
 		return nil, fmt.Errorf("linux mounts: %v", err)
 	}
 
+	//cyz-> 此处存疑？？？------------
 	for _, ns := range s.Linux.Namespaces {
 		if ns.Type == "network" && ns.Path == "" && !c.Config.NetworkDisabled {
 			target, err := os.Readlink(filepath.Join("/proc", strconv.Itoa(os.Getpid()), "exe"))

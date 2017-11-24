@@ -107,6 +107,7 @@ func (d *Daemon) ContainerExecCreate(name string, config *types.ExecConfig) (str
 		return "", err
 	}
 
+	//cyz-> 以cmd[0]作为ENTRYPOINT，cmd[1:]作为args
 	cmd := strslice.StrSlice(config.Cmd)
 	entrypoint, args := d.getEntrypointAndArgs(strslice.StrSlice{}, cmd)
 
@@ -140,6 +141,7 @@ func (d *Daemon) ContainerExecCreate(name string, config *types.ExecConfig) (str
 		execConfig.User = cntr.Config.User
 	}
 
+	//cyz-> 将这条execCommand存入Container和daemon.execStore的记录中
 	d.registerExecCommand(cntr, execConfig)
 
 	d.LogContainerEvent(cntr, "exec_create: "+execConfig.Entrypoint+" "+strings.Join(execConfig.Args, " "))

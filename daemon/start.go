@@ -154,6 +154,7 @@ func (daemon *Daemon) containerStart(container *container.Container, checkpoint 
 		return err
 	}
 
+	//cyz-> spec是Container的基础config，opencontainers的一个包。
 	spec, err := daemon.createSpec(container)
 	if err != nil {
 		return systemError{err}

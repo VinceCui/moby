@@ -55,6 +55,7 @@ func DefaultWindowsSpec() specs.Spec {
 
 // DefaultLinuxSpec create a default spec for running Linux containers
 func DefaultLinuxSpec() specs.Spec {
+	//cyz-> Spec is the base configuration for the container. https://godoc.org/github.com/opencontainers/runtime-spec/specs-go#Spec
 	s := specs.Spec{
 		Version: specs.Version,
 		Process: &specs.Process{

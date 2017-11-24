@@ -495,6 +495,7 @@ func (s *containerRouter) postContainersAttach(ctx context.Context, w http.Respo
 		return validationError{errors.Errorf("error attaching to container %s, hijack connection missing", containerName)}
 	}
 
+	//cyz-> 用conn作为3个Streams
 	setupStreams := func() (io.ReadCloser, io.Writer, io.Writer, error) {
 		conn, _, err := hijacker.Hijack()
 		if err != nil {
