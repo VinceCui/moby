@@ -190,7 +190,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 
 	var hosts []string
 
-	//cyz-> 这个循环为Config里所有的Hosts创建监听字并存入cli.api中
+	//cyz-> 这个循环为Config里所有的Hosts创建监听字并存入cli.api中。每个监听字后续会开一个go程来路由请求。
 	for i := 0; i < len(cli.Config.Hosts); i++ {
 		var err error
 		//cyz-> 此处的ParseHost根据是否设置了TLS和Host参数来返回一个Host，如果Host为空，会返回一个默认的Host（unix）；

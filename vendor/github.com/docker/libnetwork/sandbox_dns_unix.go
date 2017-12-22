@@ -47,6 +47,7 @@ func (sb *sandbox) startResolver(restore bool) {
 		}
 		sb.resolver.SetExtServers(sb.extDNS)
 
+		//cyz-> 这将切换至sandbox的命名空间并调用一个函数。SetupFunc的返回值是一个函数。
 		if err = sb.osSbox.InvokeFunc(sb.resolver.SetupFunc(0)); err != nil {
 			logrus.Errorf("Resolver Setup function failed for container %s, %q", sb.ContainerID(), err)
 			return

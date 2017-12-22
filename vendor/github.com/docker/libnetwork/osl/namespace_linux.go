@@ -197,7 +197,7 @@ func GenerateKey(containerID string) string {
 func NewSandbox(key string, osCreate, isRestore bool) (Sandbox, error) {
 	if !isRestore {
 		//cyz-> 请看Namespace原理那一章，这个函数在"/var/run/docker/netns"创建了一个新的文件，
-		//reexec一个进程，并将/proc/[pid]/ns/net文件指向它。
+		//reexec一个进程，并将/proc/[pid]/ns/net文件指向它。主要就是创建了一个新的Network Namespace
 		err := createNetworkNamespace(key, osCreate)
 		if err != nil {
 			return nil, err

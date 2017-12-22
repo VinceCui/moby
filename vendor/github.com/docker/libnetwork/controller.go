@@ -1066,7 +1066,7 @@ func (c *controller) NewSandbox(containerID string, options ...SandboxOption) (S
 
 	sb.processOptions(options...)
 
-	//cyz-> 此处存疑？？？
+	//cyz-> 只需要建立一个ingress sandbox即可
 	c.Lock()
 	if sb.ingress && c.ingressSandbox != nil {
 		c.Unlock()

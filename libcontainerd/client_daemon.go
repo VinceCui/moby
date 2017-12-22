@@ -169,6 +169,7 @@ func (c *client) Start(ctx context.Context, id, checkpointDir string, withStdin 
 
 	if checkpointDir != "" {
 		// write checkpoint to the content store
+		//cyz-> 对两个目录进行比较，返回一个tar stream
 		tar := archive.Diff(ctx, "", checkpointDir)
 		cp, err = c.writeContent(ctx, images.MediaTypeContainerd1Checkpoint, checkpointDir, tar)
 		// remove the checkpoint when we're done
@@ -662,7 +663,7 @@ func (c *client) processEventStream(ctx context.Context) {
 		}
 	}()
 
-	//cyz-> 从remote处订阅一个topic
+	//cyz-> 从remote处订阅一个topic，与task相关
 	eventStream, err = c.remote.EventService().Subscribe(ctx, &eventsapi.SubscribeRequest{
 		Filters: []string{"namespace==" + c.namespace + ",topic~=/tasks/.+"},
 	}, grpc.FailFast(false))

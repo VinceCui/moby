@@ -151,10 +151,12 @@ func (r *resolver) Start() error {
 		return r.err
 	}
 
+	//cyz-> 切换到Sandbox的Network Namespace设置IPtable。
 	if err := r.setupIPTable(); err != nil {
 		return fmt.Errorf("setting up IP table rules failed: %v", err)
 	}
 
+	//cyz-> 这里是问题的关键，监听的r.conn是在sandbox Namespace建立的，而此处则为host。
 	s := &dns.Server{Handler: r, PacketConn: r.conn}
 	r.server = s
 	go func() {
