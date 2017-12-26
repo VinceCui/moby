@@ -721,12 +721,7 @@ func NewDaemon(config *config.Config, registryService registry.Service, containe
 
 	// Create the directory where we'll store the runtime scripts (i.e. in
 	// order to support runtimeArgs)
-	/*cyz-> OCI runtime 此处存疑，参考以下资料？？？
-		https://github.com/opencontainers/runtime-spec
-		https://segmentfault.com/a/1190000009583199#articleHeader1
-		http://www.infoq.com/cn/news/2017/02/Docker-Containerd-RunC
-		https://www.opencontainers.org/
-	*/
+	//cyz-> OCI runtime 
 	daemonRuntimes := filepath.Join(config.Root, "runtimes")
 	if err := system.MkdirAll(daemonRuntimes, 0700, ""); err != nil && !os.IsExist(err) {
 		return nil, err
