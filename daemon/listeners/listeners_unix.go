@@ -59,7 +59,7 @@ func Init(proto, addr, socketGroup string, tlsConfig *tls.Config) ([]net.Listene
 
 // listenFD returns the specified socket activated files as a slice of
 // net.Listeners or all of the activated files if "*" is given.
-//cyz-> 这玩意儿很蠢，先打开了全部的可以打开的fd并创立Listener，然后再逐一关闭了，贼逗。
+//cyz-> 利用环境变量得知systemd利用socket activation为自己打开的套接字列表，然后逐一关闭。
 func listenFD(addr string, tlsConfig *tls.Config) ([]net.Listener, error) {
 	var (
 		err       error

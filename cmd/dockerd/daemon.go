@@ -194,7 +194,7 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 	for i := 0; i < len(cli.Config.Hosts); i++ {
 		var err error
 		//cyz-> 此处的ParseHost根据是否设置了TLS和Host参数来返回一个Host，如果Host为空，会返回一个默认的Host（unix）；
-		//cyz-> 如果Host不为空但没有指定协议，默认使用tcp协议。支持（tcp、unix、named_pipe、fd）
+		//cyz-> 如果Host不为空但没有指定协议，默认使用tcp协议。支持（tcp、unix、fd）这里的fd是指从systemd传过了的socket
 		if cli.Config.Hosts[i], err = dopts.ParseHost(cli.Config.TLS, cli.Config.Hosts[i]); err != nil {
 			return fmt.Errorf("error parsing -H %s : %v", cli.Config.Hosts[i], err)
 		}
